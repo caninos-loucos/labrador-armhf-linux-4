@@ -1,0 +1,30 @@
+config MACH_CANINOS
+	bool "Caninos Labrador Core Board"
+	depends on ARCH_CANINOS
+	select ARCH_HAS_CPUFREQ
+	select ARCH_REQUIRE_GPIOLIB
+	select HAS_DMA
+	select PINCTRL
+	select OF
+	select USE_OF
+	select VFP
+	select ARM_GIC
+	select HAVE_ARM_SCU if SMP
+	select HAVE_ARM_TWD if SMP
+	select HAVE_SMP
+	select SMP
+	select VIRT_TO_BUS
+	select PINMUX
+	select PINCONF
+	select REGMAP_IRQ
+	select MMC
+	select MFD_CORE
+	select DMA_ENGINE
+	select FB_CFB_FILLRECT
+	select FB_CFB_COPYAREA
+	select FB_CFB_IMAGEBLIT
+	select SERIAL_CORE
+	select SERIAL_CORE_CONSOLE
+	help
+	    Board Configuration for Caninos Labrador.
+

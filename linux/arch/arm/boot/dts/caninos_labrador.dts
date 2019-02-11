@@ -1,0 +1,490 @@
+﻿/dts-v1/;
+/include/ "skeleton.dtsi"
+
+/ {
+    model = "Caninos Labrador Board";
+	compatible = "caninos,labrador";
+	interrupt-parent = <&intc>;
+	#address-cells = <1>;
+	#size-cells = <1>;
+	
+	aliases {
+		serial0 = &uart0;
+		serial1 = &uart1;
+		serial2 = &uart2;
+		serial3 = &uart3;
+		serial4 = &uart4;
+		serial5 = &uart5;
+		serial6 = &uart6;
+		i2c0 = &i2c0;
+		i2c1 = &i2c1;
+		i2c2 = &i2c2;
+		i2c3 = &i2c3;
+		mmc0 = &mmc0;
+		mmc1 = &mmc1;
+		mmc2 = &mmc2;
+		usb0 = &usb0;
+		usb1 = &usb1;
+	};
+	
+	chosen {
+	    stdout-path = "serial3:115200n8";
+    };
+
+	cpus {
+	    #address-cells = <1>;
+		#size-cells = <0>;
+
+		CPU0: cpu@0 {
+			device_type = "cpu";
+			compatible = "arm,cortex-a9";
+			reg = <0x0>;
+			next-level-cache = <&L2>;
+		};
+
+		CPU1: cpu@1 {
+			device_type = "cpu";
+			compatible = "arm,cortex-a9";
+			reg = <0x1>;
+			next-level-cache = <&L2>;
+		};
+		
+		CPU2: cpu@2 {
+			device_type = "cpu";
+			compatible = "arm,cortex-a9";
+			reg = <0x2>;
+			next-level-cache = <&L2>;
+		};
+		
+		CPU3: cpu@3 {
+			device_type = "cpu";
+			compatible = "arm,cortex-a9";
+			reg = <0x3>;
+			next-level-cache = <&L2>;
+		};
+	};
+
+	memory {
+		name = "memory";
+		device_type = "memory";
+		reg = <0x0 0x80000000>;
+	};
+	
+	pmu {
+		compatible = "arm,cortex-a9-pmu";
+		interrupts = <0 4 0x04
+		              0 5 0x04
+		              0 6 0x04
+		              0 7 0x04>;
+		interrupt-affinity = <&CPU0>, <&CPU1>, <&CPU2>, <&CPU3>;
+	};
+	
+	soc {
+	    compatible = "simple-bus";
+		#address-cells = <1>;
+		#size-cells = <1>;
+        ranges;
+	
+	    intc: interrupt-controller@b0021000 {
+		    compatible = "arm,cortex-a9-gic";
+		    interrupt-controller;
+		    #interrupt-cells = <3>;
+		    reg = < 0xb0021000 0x1000 >,
+		          < 0xb0020100 0x0100 >;
+	    };
+	
+	    L2: cache-controller@b0022000 {
+		    compatible = "arm,pl310-cache";
+		    reg = < 0xb0022000 0x1000 >;
+		    cache-unified;
+		    cache-level = <2>;
+		    interrupts = < 0 55 0x4 >;
+		    arm,tag-latency = <3 3 2>;
+		    arm,data-latency = <5 3 3>;
+	    };
+	    
+	    uart0: serial@b0120000 {
+		    compatible = "caninos,labrador-uart";
+		    reg = <0xb0120000 0x2000>;
+		    interrupts = < 0 29 0x4 >;
+		    status = "disabled";
+	    };
+
+	    uart1: serial@b0122000 {
+		    compatible = "caninos,labrador-uart";
+		    reg = <0xb0122000 0x2000>;
+		    interrupts = < 0 30 0x4 >;
+		    status = "disabled";
+	    };
+
+	    uart2: serial@b0124000 {
+		    compatible = "caninos,labrador-uart";
+		    reg = <0xb0124000 0x2000>;
+		    interrupts = < 0 31 0x4 >;
+		    status = "disabled";
+	    };
+
+	    uart3: serial@b0126000 {
+		    compatible = "caninos,labrador-uart";
+		    reg = <0xb0126000 0x2000>;
+		    interrupts = < 0 32 0x4 >;
+		    clock-frequency = <48000000>;
+		    pinctrl-names = "default";
+		    pinctrl-0 = <&serial3_state_default>;
+		    status = "okay";
+	    };
+
+	    uart4: serial@b0128000 {
+		    compatible = "caninos,labrador-uart";
+		    reg = <0xb0128000 0x2000>;
+		    interrupts = < 0 33 0x4 >;
+		    status = "disabled";
+	    };
+
+	    uart5: serial@b012a000 {
+		    compatible = "caninos,labrador-uart";
+		    reg = <0xb012a000 0x2000>;
+		    interrupts = < 0 34 0x4 >;
+		    status = "disabled";
+	    };
+
+	    uart6: serial@b012c000 {
+		    compatible = "caninos,labrador-uart";
+		    reg = <0xb012c000 0x2000>;
+		    interrupts = < 0 35 0x4 >;
+		    status = "disabled";
+	    };
+	    
+	    i2c0: i2c@b0170000 {
+	    	#address-cells = <1>;
+		    #size-cells = <0>;
+		    compatible = "caninos,labrador-i2c";
+		    reg = <0xb0170000 0x4000>;
+		    interrupts = < 0 25 0x4 >;
+		    status = "disabled";
+	    };
+	    
+	    i2c1: i2c@b0174000 {
+		    #address-cells = <1>;
+		    #size-cells = <0>;
+		    compatible = "caninos,labrador-i2c";
+		    reg = <0xb0174000 0x4000>;
+		    interrupts = < 0 26 0x4 >;
+		    status = "disabled";
+	    };
+
+	    i2c2: i2c@b0178000 {
+		    #address-cells = <1>;
+		    #size-cells = <0>;
+		    compatible = "caninos,labrador-i2c";
+		    reg = <0xb0178000 0x4000>;
+		    interrupts = < 0 27 0x4 >;
+		    status = "disabled";
+	    };
+
+	    i2c3: i2c@b017c000 {
+		    #address-cells = <1>;
+		    #size-cells = <0>;
+		    compatible = "caninos,labrador-i2c";
+		    reg = <0xb017c000 0x4000>;
+		    interrupts = < 0 28 0x4 >;
+		    status = "disabled";
+	    };
+	    
+	    mmc0: mmc@b0230000 {
+	        #address-cells = <1>;
+		    #size-cells = <0>;
+		    compatible = "caninos,labrador-emmc";
+		    reg = <0xb0230000 0x38>;
+		    interrupts = < 0 42 0x4 >;
+		    
+		    pinctrl-names = "default";
+		    pinctrl-0 = <&mmc0_state_default>;
+		    
+		    // [9] MIPI_DSI_DP1 -> card detect
+		    
+		    card_dt_gpio = <&gpio 66 1>;
+		    
+		    status = "disabled";
+	    };
+	    
+	    mmc1: mmc@b0234000 {
+	        #address-cells = <1>;
+		    #size-cells = <0>;
+		    compatible = "caninos,labrador-emmc";
+		    reg = <0xb0234000 0x38>;
+		    interrupts = < 0 43 0x4 >;
+		    
+		    pinctrl-names = "default";
+		    pinctrl-0 = <&mmc1_state_default>;
+		    
+		    // MIPI_DSI_DN1         -> bt rst
+            // LCD0_D18(B30)        -> wifi shdn
+            // PCM1_SYNC/PA_EN(D30) -> wifi power enable
+		    
+		    card_pw_gpio = <&gpio 126 0>; // GPIOD30 = 3 * 32 + 30 = 126
+		    card_en_gpio = <&gpio 62 0>;  // GPIOB30 = 32 + 30 = 62
+		    
+		    enable_sdio_mode;
+		    
+            status = "disabled";
+	    };
+	    
+	    mmc2: mmc@b0238000 {
+	        #address-cells = <1>;
+		    #size-cells = <0>;
+		    compatible = "caninos,labrador-emmc";
+		    reg = <0xb0238000 0x38>;
+		    interrupts = < 0 44 0x4 >;
+		    
+		    pinctrl-names = "default";
+		    pinctrl-0 = <&mmc2_state_default>;
+		    
+		    low_voltage_support;
+	        
+            status = "okay";
+	    };
+	    
+	    gpio: gpio@b01b0000 {
+		    compatible = "caninos,labrador-gpio";
+		    reg = < 0xb01b0000 0x40 >;
+		    interrupts = <
+			    0 36 0x04 /* GPIOA */
+			    0 37 0x04 /* GPIOB */
+			    0 38 0x04 /* GPIOC */
+			    0 39 0x04 /* GPIOD */
+			    0 40 0x04 /* GPIOE */ >;
+		    #gpio-cells = <2>;
+		    gpio-controller;
+		    #interrupt-cells = <2>;
+		    interrupt-controller;
+		    gpio-ranges = <&pinctrl0 0 0 132>;
+		    status = "okay";
+	    };
+	    
+	    pinctrl0: pinctrl@b01b0040 {
+	        compatible = "caninos,labrador-pinctrl";
+		    pinctrl-names = "default";
+		    pinctrl-0 = <&state_default>;
+		    
+		    state_default: pinctrl_default {
+		    };
+
+		    serial3_state_default: serial3_default{
+			    serial_3{
+				    caninos,groups = "mfp2_21","mfp2_20","uart3_dummy";
+				    caninos,function = "uart3";
+			    };
+		    };
+		    
+		    mmc0_state_default: mmc0_default {
+			    sd0_mfp_d0_d3_cmd_clk {
+				    caninos,groups = "mfp2_19_17", "mfp2_16_14", "mfp2_13_11", "mfp2_8_7", "mfp2_6_5";
+				    caninos,function = "sd0";
+			    };
+
+			    sd0_pull_d0_d3_cmd {
+				    caninos,pins = "P_SD0_D0", "P_SD0_D1", "P_SD0_D2", "P_SD0_D3", "P_SD0_CMD";
+				    caninos,pull = <2>;
+			    };
+
+			    sd0_pull_clk {
+				    caninos,pins = "P_SD0_CLK";
+				    caninos,pull = <0>;
+			    };
+			
+			    sd0_d0_d3_cmd_clk_paddrv  {
+				    caninos,groups  = "paddrv1_23_22","paddrv1_19_18","paddrv1_17_16";
+				    caninos,paddrv  = <1>;	
+			    };
+		    };
+		    
+		    mmc1_state_default: mmc1_default {
+			    sd1_mfp_d0_d3_cmd_clk {
+				    caninos,groups = "mfp2_10_9", "mfp2_4_3", "sd1_dummy";
+				    caninos,function = "sd1";
+			    };
+
+			    sd1_pull_d0_d3_cmd {
+				    caninos,pins = "P_SD1_D0", "P_SD1_D1", "P_SD1_D2", "P_SD1_D3", "P_SD1_CMD";
+				    caninos,pull = <2>;
+			    };
+			    
+			    sd1_d0_d3_cmd_clk_paddrv  {
+				    caninos,groups  = "paddrv1_21_20","paddrv1_15_14","paddrv1_13_12";
+				    caninos,paddrv  = <1>;
+			    };
+		    };
+		    
+		    mmc2_state_default: mmc2_default {
+			    sd2_mfp_d0_d3_cmd_clk {
+				    caninos,groups = "mfp3_3";
+				    caninos,function = "sd2";
+			    };
+
+			    sd2_pull_d0_d3_cmd {
+				    caninos,pins = "P_DNAND_D0","P_DNAND_D1","P_DNAND_D2","P_DNAND_D3",
+				                   "P_DNAND_D4","P_DNAND_D5","P_DNAND_D6","P_DNAND_D7","P_DNAND_RDBN";
+				    caninos,pull = <2>;
+			    };
+			};
+			
+			ethernet_state_default: ethernet_default {
+			    ethernet_smi { // pins: MDC & MDIO
+				    caninos,groups = "eth_smi_dummy";
+				    caninos,function = "eth_rmii";
+			    };
+
+			    ethernet_rmii_txd01 {
+				    caninos,groups = "mfp0_18_16_eth_txd0", "mfp0_18_16_eth_txd1";
+				    caninos,function = "eth_rmii";
+			    };
+
+			    ethernet_rmii_txen_rxer {
+				    caninos,groups = "mfp0_15_13_rmii_txen", "mfp0_15_13_rmii_rxen";
+				    caninos,function = "eth_rmii";
+			    };
+
+			    ethernet_rmii_crs_dv {
+				    caninos,groups = "mfp0_22_20";
+				    caninos,function = "eth_rmii";
+			    };
+
+			    ethernet_rmii_rxd10 {
+				    caninos,groups = "mfp0_10_8_rmii_rxd1", "mfp0_10_8_rmii_rxd0";
+				    caninos,function = "eth_rmii";
+			    };
+
+			    ethernet_rmii_ref_clk {
+				    caninos,groups = "mfp0_7_6";
+				    caninos,function = "eth_rmii";
+			    };
+		    };
+	    };
+	    
+	    dma@b0260000 {
+		    compatible = "caninos,labrador-dma";
+		    reg = <0xb0260000 0xd00>;
+		    interrupts = < 0 57 0x4 >, < 0 58 0x4 >, < 0 59 0x4 >, < 0 60 0x4 >;
+	    };
+	    
+	    sirq: sirq@b01b0200 {
+		    compatible = "caninos,labrador-sirq";
+		    reg = < 0xb01b0200 0x4 >;
+		    interrupts = <
+			    0 13 0x04  // SIRQ0
+			    0 14 0x04  // SIRQ1
+			    0 15 0x04  >;// SIRQ2 
+		    #interrupt-cells = <2>;
+		    interrupt-controller;
+	    };
+	    
+	    gpt: gpt@b0168000 {
+		    compatible = "caninos,labrador-gpt";
+		    reg = <0xb0168000 0x8000>;
+		    interrupts = <0 11 4>;
+		    clocks = <&clks 98>;
+		    clock-names = "TIMER_CLK";
+	    };
+
+	    clks: clk@b0160000 {
+		    compatible = "caninos,labrador-clk";
+		    reg = <0xb0160000 0x8000>;
+		    #clock-cells = <1>;
+	    };
+	    
+	    cpufreq {
+		    compatible = "caninos,labrador-cpufreq";
+	    };
+	    
+	    timer@b0020600 {
+		    compatible = "arm,cortex-a9-twd-timer";
+		    reg = <0xb0020600 0x20>;
+		    interrupts = <1 13 0xf01>;
+		    interrupt-parent = <&intc>;
+		    clocks = <&clks 37>;
+	    };
+	    
+	    hdmi@b02c0000{
+		    compatible = "caninos,labrador-hdmi";
+		    reg = <0xb02c0000 0x160>;
+		    hdcp_onoff = <0>;
+		    channel_invert = <0>;
+		    bit_invert = <0>;
+		    hotplugable = <1>;
+		    bootable = <1>; 
+		    bootrotate = <0>;   
+		    default_resolution = "1920x1080p-60";
+	    };
+	
+	    hdmi_cec@b02c011c{
+		    compatible = "caninos,labrador-hdmi-cec";
+		    reg = <0xb02c0000 0x160>;
+	    };
+
+	    de@b02e0000 {
+		    compatible = "caninos,labrador-de";
+		    reg = <0xb02e0000 0x100e>, <0xb0500108 0x4>;
+	    };
+	    
+	    framebuffer {
+		    compatible = "caninos,labrador-fb";  
+		    def_display  = "hdmi";
+		    xres=<1920>;
+		    yres=<1080>;
+		    bpp=<4>;
+	    };
+	    
+	    ethernet@b0310000 {
+	        #address-cells = <1>;
+		    #size-cells = <0>;
+		    compatible = "caninos,labrador-eth";
+		    reg = <0xb0310000 0x10000>;
+		    interrupts = < 0 0 0x4 >;
+		    pinctrl-names = "default";
+		    pinctrl-0 = <&ethernet_state_default>;
+		    
+		    phy-power-gpio = <&gpio 43 0>; // GPIOB11 active 1:low 0:high
+		    phy-reset-gpio = <&gpio 127 0>; // GPIOD31 active 1:low 0:high
+		    phy_addr = <1>;
+		    
+		    address-bits = <48>;
+		    max-frame-size = <1518>;
+
+		    status = "okay";
+	    };
+	    
+	    usb@b0400000 {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			compatible = "actions,atm7059tc-usb";
+			reg = <0xb0400000 0xcd00>,
+			      <0xb040cd00 0x59>;
+			interrupts = < 0 23 0x4 >;
+			usb_serialnumber_config = <1>; /* config serialnumber string format, 0: unified ascii; 1:unified unicode; 2:nounified unicode; 3: nounified ascii*/
+			usb_hs_output_strength = <2>; /*defaut:2,range:0~7; 0:min,7:max;usb high speed(2.0)transmitter output strength*/
+			status = "okay";
+		};
+	    
+	    usb0: usb@b0600000 {
+		    #address-cells = <1>;
+		    #size-cells = <0>;
+		    compatible = "caninos,labrador-usb-2.0-0";
+		    reg = <0xb0600000 0x1000>;
+		    interrupts = < 0 24 0x4 >;
+		    status = "disabled"; // must always be disabled
+		    port0_host_plug_detect = <1>;
+	    };
+	
+	    usb1: usb@b0700000 {
+		    #address-cells = <1>;
+		    #size-cells = <0>;
+		    compatible = "caninos,labrador-usb-2.0-1";
+		    reg = <0xb0700000 0x1000>;
+		    interrupts = < 0 61 0x4 >;
+		    status = "disabled"; // must always be disabled
+		    port1_host_plug_detect = <1>;
+	    };
+	};
+};
+
