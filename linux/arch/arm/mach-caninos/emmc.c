@@ -22,7 +22,7 @@
 #include <mach/hardware.h>
 
 // Uncoment the line below to enable debug messages.
-//#define DEBUG 
+#define DEBUG 
 
 #ifdef DEBUG
 #define INFO_MSG(dev,...) dev_info(dev,__VA_ARGS__)
@@ -876,9 +876,9 @@ static void sdiohost_snd_rcv(struct mmc_host * mmc, struct mmc_command *cmd,
     writel(mode, host->iobase + SD_CTL_OFFSET); 
     smp_wmb();
     
-    wait_for_completion_timeout(&host->sdc_complete, msecs_to_jiffies(1000));
+    wait_for_completion_timeout(&host->sdc_complete, msecs_to_jiffies(10000));
     
-    if (total != 0 && wait_for_completion_timeout(&host->dma_complete, msecs_to_jiffies(5000)) == 0)
+    if (total != 0 && wait_for_completion_timeout(&host->dma_complete, msecs_to_jiffies(15000)) == 0)
     {
         ERR_MSG(mmc->parent, "CMD%u ARG = 0x%x - dma operation timeout\n", opcode, arg);
         sdc_reset_hardware_state_mach(mmc);
@@ -1077,7 +1077,7 @@ static int controller_set_voltage(struct mmc_host * mmc, u32 voltage)
     	smp_wmb();
     }
     
-    mdelay(5);
+    mdelay(10);
     
     enable = readl(host->iobase + SD_EN_OFFSET);
     smp_rmb();
@@ -1092,7 +1092,7 @@ static int controller_set_voltage(struct mmc_host * mmc, u32 voltage)
     writel(enable, host->iobase + SD_EN_OFFSET);
     smp_wmb();
     
-    mdelay(10);
+    mdelay(20);
     
     if (host->clock != 0)
     {
@@ -1251,7 +1251,7 @@ static int sdiohost_init(struct sdiohost * host, struct platform_device * pdev)
     mmc->caps |= MMC_CAP_4_BIT_DATA | MMC_CAP_8_BIT_DATA;
     mmc->caps |= MMC_CAP_MMC_HIGHSPEED;
     mmc->caps |= MMC_CAP_SD_HIGHSPEED | MMC_CAP_UHS_SDR12 | MMC_CAP_UHS_SDR25;
-    mmc->caps |= MMC_CAP_UHS_DDR50 | MMC_CAP_NONREMOVABLE;
+    mmc->caps |= MMC_CAP_UHS_SDR50 | MMC_CAP_UHS_DDR50 | MMC_CAP_NONREMOVABLE;
 	
 	mmc->caps2 = MMC_CAP2_NO_WRITE_PROTECT | MMC_CAP2_BOOTPART_NOACC;
 	

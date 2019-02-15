@@ -1,3 +1,3 @@
 obj-y += aotg/
-obj-y += dwc3/
+#obj-y += dwc3/
 
