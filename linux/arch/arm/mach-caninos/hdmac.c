@@ -1549,6 +1549,9 @@ static int __init owl_dma_probe(struct platform_device *pdev)
 	owl_dma->dma_desc_pool = dma_pool_create("acts_hdmac_desc_pool",
 			&pdev->dev, sizeof(struct acts_desc),
 			4 /* word alignment */, 0);
+			
+			
+			
 	if (!owl_dma->dma_desc_pool) {
 		dev_err(&pdev->dev, "No memory for descriptors dma pool\n");
 		err = -ENOMEM;
@@ -1622,8 +1625,14 @@ static int __init owl_dma_probe(struct platform_device *pdev)
 			owl_dma->dma_common.cap_mask)  ? "slave " : "",
 		0 ? "memset " : "",
 		owl_dma->dma_common.chancnt);
+		
+	err = dma_async_device_register(&owl_dma->dma_common);
 
-	dma_async_device_register(&owl_dma->dma_common);
+	if (err < 0)
+	{
+		pr_err("Could not register dma device.\n");
+		goto err_pool_create;
+	}
 
 	return 0;
 

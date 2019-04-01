@@ -67,7 +67,7 @@
 	memory {
 		name = "memory";
 		device_type = "memory";
-		reg = <0x0 0x80000000>;
+		reg = <0x0 0x40000000>;
 	};
 	
 	pmu {
@@ -205,7 +205,7 @@
 		    
 		    card_dt_gpio = <&gpio 66 1>;
 		    
-		    status = "disabled";
+		    status = "okay";
 	    };
 	    
 	    mmc1: mmc@b0234000 {
@@ -366,6 +366,7 @@
 		    compatible = "caninos,labrador-dma";
 		    reg = <0xb0260000 0xd00>;
 		    interrupts = < 0 57 0x4 >, < 0 58 0x4 >, < 0 59 0x4 >, < 0 60 0x4 >;
+		    status = "okay";
 	    };
 	    
 	    sirq: sirq@b01b0200 {
