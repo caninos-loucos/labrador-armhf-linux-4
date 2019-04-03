@@ -148,7 +148,6 @@ struct sdiohost
     u32 signal_voltage;
     
     bool sdc_enabled;
-    bool irq_enabled;
     bool ddr_enabled;
     
     bool low_voltage_support;
@@ -252,10 +251,6 @@ static void controller_chip_select(struct mmc_host * mmc, u32 chip_select, bool 
         return;
     }
     
-    if (host->power_mode == MMC_POWER_OFF) {
-        return;
-    }
-    
     enable = readl(host->iobase + SD_EN_OFFSET);
     smp_rmb();
     
@@ -264,12 +259,16 @@ static void controller_chip_select(struct mmc_host * mmc, u32 chip_select, bool 
     
     if (chip_select == MMC_CS_HIGH)
     {
-		enable |= 0x1;
-		if (show) INFO_MSG(mmc->parent, "chip select set to high\n");
+		//enable |= 0x1;
+		
+		INFO_MSG(mmc->parent, "chip select set to high\n");
+		
 		host->chip_select = MMC_CS_HIGH;
     }
-    else {
-        if (show) INFO_MSG(mmc->parent, "chip select set to low\n");
+    else
+    {
+        INFO_MSG(mmc->parent, "chip select set to low\n");
+        
         host->chip_select = MMC_CS_LOW;
     }
 
@@ -379,10 +378,6 @@ static void controller_enable_irq(struct mmc_host * mmc)
     struct sdiohost * host = mmc_priv(mmc);
     u32 state;
     
-    if (host->irq_enabled) {
-        return;
-    }
-    
     if (host->power_mode == MMC_POWER_OFF) {
         return;
     }
@@ -397,7 +392,6 @@ static void controller_enable_irq(struct mmc_host * mmc)
     smp_wmb();
     
     INFO_MSG(mmc->parent, "controller irq enabled\n");
-    host->irq_enabled = true;
     
     reinit_completion(&host->sdc_complete);
 }
@@ -454,7 +448,7 @@ static void controller_power_on(struct mmc_host * mmc)
     
     controller_enable_irq(mmc);
     
-    controller_enable_sdio_irq(mmc);
+    //controller_enable_sdio_irq(mmc);
     
     if (host->card_en_gpio >= 0) {
         gpio_set_value(host->card_en_gpio, 1);
@@ -490,10 +484,9 @@ static void controller_power_off(struct mmc_host * mmc)
     host->signal_voltage = MMC_SIGNAL_VOLTAGE_330;
     
     host->sdc_enabled = false;
-    host->irq_enabled = false;
     host->ddr_enabled = false;
     
-    host->sdio_irq_enabled = host->sdio_mode;
+    host->sdio_irq_enabled = false;
     
     module_clk_disable(host->module_id);
     mdelay(20);
@@ -558,10 +551,6 @@ static void controller_set_bus_width(struct mmc_host * mmc, u32 bus_width)
     {
     case MMC_BUS_WIDTH_1:
         INFO_MSG(mmc->parent, "bus width set to 1 bit\n");
-        
-        if (host->chip_select == MMC_CS_HIGH) {
-           enable |= 0x1;
-        } 
         break;
     
     case MMC_BUS_WIDTH_4:
@@ -627,26 +616,28 @@ static irqreturn_t irq_handler(int irqnum, void * param)
     unsigned long flags;
     u32 state;
     
-    if (!host->irq_enabled) {
-        return IRQ_HANDLED;
-    }
-
     spin_lock_irqsave(&host->lock, flags);
 
     state = readl(host->iobase + SD_STATE_OFFSET);
     
-    if ((state & SD_STATE_TEIE) && (state & SD_STATE_TEI)) {
-		complete(&host->sdc_complete);
-	}
-	
-	if ((state & SD_STATE_SDIOA_EN) && (state & SD_STATE_SDIOA_P)) {
-		mmc_signal_sdio_irq(host->mmc);
-	}
-	
 	// clear IRQ pending bit
 	writel(state, host->iobase + SD_STATE_OFFSET); 
 	
 	spin_unlock_irqrestore(&host->lock, flags);
+	
+	if ((state & SD_STATE_TEIE) && (state & SD_STATE_TEI)) {
+		complete(&host->sdc_complete);
+	}
+	
+	if ((state & SD_STATE_SDIOA_EN) && (state & SD_STATE_SDIOA_P))
+	{
+		if (host->sdio_irq_enabled)
+		{
+			mmc_signal_sdio_irq(host->mmc);
+			
+			INFO_MSG(host->mmc->parent, "sdio irq received\n");
+		}
+	}
 	
     return IRQ_HANDLED;
 }
@@ -716,7 +707,6 @@ static void sdiohost_snd_rcv(struct mmc_host * mmc, struct mmc_command *cmd,
 	u32 state, enable, mode;
 	u32 tmode;
 	u32 tmp[2];
-	u32 chip_select;
 	u32 total, blksz, blocks;
 	bool write;
 	
@@ -758,10 +748,6 @@ static void sdiohost_snd_rcv(struct mmc_host * mmc, struct mmc_command *cmd,
 		
 		write = (data->flags & MMC_DATA_WRITE) ? true : false;
 	}
-	
-	chip_select = host->chip_select;
-	
-	controller_chip_select(mmc, MMC_CS_LOW, false);
 	
 	if (total != 0)
 	{
@@ -876,14 +862,13 @@ static void sdiohost_snd_rcv(struct mmc_host * mmc, struct mmc_command *cmd,
     writel(mode, host->iobase + SD_CTL_OFFSET); 
     smp_wmb();
     
-    wait_for_completion_timeout(&host->sdc_complete, msecs_to_jiffies(10000));
+    wait_for_completion_timeout(&host->sdc_complete, msecs_to_jiffies(2000));
     
-    if (total != 0 && wait_for_completion_timeout(&host->dma_complete, msecs_to_jiffies(15000)) == 0)
+    if (total != 0 && wait_for_completion_timeout(&host->dma_complete, msecs_to_jiffies(2000)) == 0)
     {
         ERR_MSG(mmc->parent, "CMD%u ARG = 0x%x - dma operation timeout\n", opcode, arg);
         sdc_reset_hardware_state_mach(mmc);
         dmaengine_terminate_all(host->dma);
-        controller_chip_select(mmc, chip_select, false);
         
         *err_cmd  = -ETIMEDOUT;
         *err_data = -ETIMEDOUT;
@@ -898,7 +883,6 @@ static void sdiohost_snd_rcv(struct mmc_host * mmc, struct mmc_command *cmd,
     {
         ERR_MSG(mmc->parent, "CMD%u ARG = 0x%x - transmission timeout\n", opcode, arg);
         sdc_reset_hardware_state_mach(mmc);
-        controller_chip_select(mmc, chip_select, false);
         
         *err_cmd  = -ETIMEDOUT;
         *err_data = -ETIMEDOUT;
@@ -912,7 +896,6 @@ static void sdiohost_snd_rcv(struct mmc_host * mmc, struct mmc_command *cmd,
         {
         	INFO_MSG(mmc->parent, "CMD%u ARG = 0x%x - no response\n", opcode, arg);
             sdc_reset_hardware_state_mach(mmc);
-            controller_chip_select(mmc, chip_select, false);
             
             *err_cmd  = -EILSEQ;
             *err_data = -EILSEQ;
@@ -924,7 +907,6 @@ static void sdiohost_snd_rcv(struct mmc_host * mmc, struct mmc_command *cmd,
         {
             INFO_MSG(mmc->parent, "CMD%u ARG = 0x%x - response crc error\n", opcode, arg);
             sdc_reset_hardware_state_mach(mmc);
-            controller_chip_select(mmc, chip_select, false);
             
             *err_cmd  = -EILSEQ;
             *err_data = -EILSEQ;
@@ -960,7 +942,6 @@ static void sdiohost_snd_rcv(struct mmc_host * mmc, struct mmc_command *cmd,
 	        {
 	            INFO_MSG(mmc->parent, "CMD%u ARG = 0x%x - write data crc error\n", opcode, arg);
                 sdc_reset_hardware_state_mach(mmc);
-                controller_chip_select(mmc, chip_select, false);
                 
                 *err_data = -EILSEQ;
                 
@@ -973,7 +954,6 @@ static void sdiohost_snd_rcv(struct mmc_host * mmc, struct mmc_command *cmd,
 	        {
 	            INFO_MSG(mmc->parent, "CMD%u ARG = 0x%x - read data crc error\n", opcode, arg);
                 sdc_reset_hardware_state_mach(mmc);
-                controller_chip_select(mmc, chip_select, false);
                 
                 *err_data = -EILSEQ;
                 
@@ -981,8 +961,6 @@ static void sdiohost_snd_rcv(struct mmc_host * mmc, struct mmc_command *cmd,
 	        }
 	    }
 	}
-	
-	controller_chip_select(mmc, chip_select, false);
 	
 	*err_data = 0;
 }
@@ -1248,12 +1226,11 @@ static int sdiohost_init(struct sdiohost * host, struct platform_device * pdev)
     init_completion(&host->sdc_complete);
     
     mmc->caps  = MMC_CAP_ERASE | MMC_CAP_WAIT_WHILE_BUSY;
-    mmc->caps |= MMC_CAP_4_BIT_DATA | MMC_CAP_8_BIT_DATA;
-    mmc->caps |= MMC_CAP_MMC_HIGHSPEED;
+    mmc->caps |= MMC_CAP_4_BIT_DATA | MMC_CAP_MMC_HIGHSPEED;
     mmc->caps |= MMC_CAP_SD_HIGHSPEED | MMC_CAP_UHS_SDR12 | MMC_CAP_UHS_SDR25;
-    mmc->caps |= MMC_CAP_UHS_SDR50 | MMC_CAP_UHS_DDR50 | MMC_CAP_NONREMOVABLE;
+    mmc->caps |= MMC_CAP_UHS_SDR50;
 	
-	mmc->caps2 = MMC_CAP2_NO_WRITE_PROTECT | MMC_CAP2_BOOTPART_NOACC;
+	mmc->caps2 = MMC_CAP2_NO_WRITE_PROTECT;
 	
 	mmc->f_min = 100000;
     mmc->f_max = 52000000;
@@ -1276,7 +1253,6 @@ static int sdiohost_init(struct sdiohost * host, struct platform_device * pdev)
     host->signal_voltage = MMC_SIGNAL_VOLTAGE_330;
     
     host->sdc_enabled = false;
-    host->irq_enabled = false;
     host->ddr_enabled = false;
     
     host->card_en_gpio = -1;
@@ -1288,8 +1264,10 @@ static int sdiohost_init(struct sdiohost * host, struct platform_device * pdev)
     if (host->low_voltage_support)
     {
     	INFO_MSG(parent, "low voltage support enabled\n");
-    	ocr_avail |= MMC_VDD_165_195;
-    	mmc->caps |= MMC_CAP_1_8V_DDR;
+    	ocr_avail  |= MMC_VDD_165_195;
+    	mmc->caps  |= MMC_CAP_1_8V_DDR | MMC_CAP_UHS_DDR50 | MMC_CAP_8_BIT_DATA;
+    	mmc->caps  |= MMC_CAP_NONREMOVABLE;
+    	mmc->caps2 |= MMC_CAP2_BOOTPART_NOACC;
     }
     
     mmc->ocr_avail      = ocr_avail;
@@ -1297,12 +1275,14 @@ static int sdiohost_init(struct sdiohost * host, struct platform_device * pdev)
 	mmc->ocr_avail_mmc  = ocr_avail;
 	mmc->ocr_avail_sd   = ocr_avail;
     
-	host->sdio_irq_enabled = host->sdio_mode = of_property_read_bool(parent->of_node, "enable_sdio_mode");
+	host->sdio_irq_enabled = false;
+	
+	host->sdio_mode = of_property_read_bool(parent->of_node, "enable_sdio_mode");
 	
 	if (host->sdio_mode)
 	{
 		INFO_MSG(parent, "sdio mode enabled\n");
-		mmc->caps |= MMC_CAP_SDIO_IRQ;
+		//mmc->caps |= MMC_CAP_SDIO_IRQ;
 	}
 	else
 	{

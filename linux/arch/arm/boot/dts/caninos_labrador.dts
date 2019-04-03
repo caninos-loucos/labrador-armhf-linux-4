@@ -67,7 +67,7 @@
 	memory {
 		name = "memory";
 		device_type = "memory";
-		reg = <0x0 0x40000000>;
+		reg = <0x0 0x80000000>;
 	};
 	
 	pmu {
@@ -227,7 +227,7 @@
 		    
 		    enable_sdio_mode;
 		    
-            status = "disabled";
+            status = "okay";
 	    };
 	    
 	    mmc2: mmc@b0238000 {
