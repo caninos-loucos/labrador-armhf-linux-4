@@ -5,7 +5,9 @@
 #include <linux/workqueue.h>
 #include <linux/completion.h>
 #include <linux/gpio.h>
+#include <linux/of.h>
 #include <linux/of_gpio.h>
+#include <linux/clk.h>
 #include <linux/pinctrl/consumer.h>
 #include <linux/regulator/consumer.h>
 #include <linux/platform_device.h>
@@ -1207,6 +1209,13 @@ static const struct mmc_host_ops sdiohost_ops =
 	.enable_sdio_irq = sdiohost_enable_sdio_irq,
 };
 
+enum
+{
+	DEV_SDCARD = 0,
+	DEV_SDIO,
+	DEV_EMMC,
+};
+
 static int sdiohost_init(struct sdiohost * host, struct platform_device * pdev)
 {
     struct mmc_host * mmc = host->mmc;
@@ -1215,8 +1224,8 @@ static int sdiohost_init(struct sdiohost * host, struct platform_device * pdev)
     dma_cap_mask_t mask;
     char buffer[32];
     const char * pm;
-    u32 ocr_avail;
-    int ret;
+    int ret, dev_type;
+    const char *out;
     
     parent = mmc->parent;
     
@@ -1225,71 +1234,97 @@ static int sdiohost_init(struct sdiohost * host, struct platform_device * pdev)
     init_completion(&host->dma_complete);
     init_completion(&host->sdc_complete);
     
-    mmc->caps  = MMC_CAP_ERASE | MMC_CAP_WAIT_WHILE_BUSY;
-    mmc->caps |= MMC_CAP_4_BIT_DATA | MMC_CAP_MMC_HIGHSPEED;
-    mmc->caps |= MMC_CAP_SD_HIGHSPEED | MMC_CAP_UHS_SDR12 | MMC_CAP_UHS_SDR25;
-    mmc->caps |= MMC_CAP_UHS_SDR50;
-	
-	mmc->caps2 = MMC_CAP2_NO_WRITE_PROTECT;
-	
-	mmc->f_min = 100000;
-    mmc->f_max = 52000000;
-    
-    ocr_avail  = MMC_VDD_27_28 | MMC_VDD_28_29 | MMC_VDD_29_30;
-    ocr_avail |= MMC_VDD_30_31 | MMC_VDD_31_32 | MMC_VDD_32_33;
-    ocr_avail |= MMC_VDD_33_34 | MMC_VDD_34_35 | MMC_VDD_35_36;
-	
-	mmc->max_seg_size  = 256 * 512;
-    mmc->max_segs      = 128;
-    mmc->max_req_size  = 512 * 256;
-    mmc->max_blk_size  = 512;
-    mmc->max_blk_count = 256;
-	
 	host->clock          = 0;
 	host->actual_clock   = 0;
     host->power_mode     = MMC_POWER_UNDEFINED;
     host->chip_select    = MMC_CS_DONTCARE;
     host->bus_width      = MMC_BUS_WIDTH_1;
     host->signal_voltage = MMC_SIGNAL_VOLTAGE_330;
-    
-    host->sdc_enabled = false;
-    host->ddr_enabled = false;
-    
     host->card_en_gpio = -1;
     host->card_pw_gpio = -1;
     host->card_dt_gpio = -1;
+    host->sdio_irq_enabled = false;
+    host->sdc_enabled = false;
+    host->ddr_enabled = false;
     
-    host->low_voltage_support = of_property_read_bool(parent->of_node, "low_voltage_support");
+    ret = of_property_read_string(parent->of_node, "device_type", &out);
+    
+    if (ret < 0)
+    {
+    	ERR_MSG(parent, "could not get device type from DTS\n");
+		goto out;
+    }
+    
+    if (strcmp(out, "sdcard") == 0) {
+    	dev_type = DEV_SDCARD;
+    }
+    else if (strcmp(out, "emmc") == 0) {
+    	dev_type = DEV_EMMC;
+    }
+    else if (strcmp(out, "sdio") == 0) {
+    	dev_type = DEV_SDIO;
+    }
+    else
+    {
+    	ERR_MSG(parent, "unrecognized device type\n");
+    	ret = -EINVAL;
+		goto out;
+    }
+    
+    mmc->ocr_avail  = MMC_VDD_27_28 | MMC_VDD_28_29 | MMC_VDD_29_30;
+    mmc->ocr_avail |= MMC_VDD_30_31 | MMC_VDD_31_32 | MMC_VDD_32_33;
+    mmc->ocr_avail |= MMC_VDD_33_34 | MMC_VDD_34_35 | MMC_VDD_35_36;
+    
+    mmc->ocr_avail_sdio = mmc->ocr_avail;
+	mmc->ocr_avail_mmc  = mmc->ocr_avail;
+	mmc->ocr_avail_sd   = mmc->ocr_avail;
+    
+    mmc->f_min = 187500;
+    mmc->f_max = 52000000;
+    
+    mmc->max_seg_size  = 256 * 512;
+    mmc->max_segs      = 128;
+    mmc->max_req_size  = 512 * 256;
+    mmc->max_blk_size  = 512;
+    mmc->max_blk_count = 256;
+    
+    mmc->caps  = MMC_CAP_4_BIT_DATA;
+    mmc->caps |= MMC_CAP_UHS_SDR12 | MMC_CAP_UHS_SDR25 | MMC_CAP_UHS_SDR50;
+    mmc->caps2 = MMC_CAP2_NO_WRITE_PROTECT;
+    
+    switch (dev_type)
+    {
+    case DEV_SDCARD:
+    	mmc->caps  |= MMC_CAP_ERASE | MMC_CAP_SD_HIGHSPEED;
+    	mmc->caps2 |= MMC_CAP2_NO_SDIO | MMC_CAP2_NO_MMC;
+    	host->sdio_mode = false;
+    	break;
+    	
+    case DEV_EMMC:
+    	mmc->caps  |= MMC_CAP_ERASE | MMC_CAP_MMC_HIGHSPEED;
+    	mmc->caps  |= MMC_CAP_NONREMOVABLE;
+    	mmc->caps2 |= MMC_CAP2_BOOTPART_NOACC;
+    	mmc->caps2 |= MMC_CAP2_NO_SD | MMC_CAP2_NO_SDIO;
+    	host->sdio_mode = false;
+    	break;
+    	
+    case DEV_SDIO:
+    	//mmc->caps  |= MMC_CAP_WAIT_WHILE_BUSY;
+    	mmc->caps2 |= MMC_CAP2_NO_SD | MMC_CAP2_NO_MMC;
+    	host->sdio_mode = true;
+    	break;
+    }
+    
+    /*host->low_voltage_support = of_property_read_bool(parent->of_node, "low_voltage_support");
     
     if (host->low_voltage_support)
     {
     	INFO_MSG(parent, "low voltage support enabled\n");
     	ocr_avail  |= MMC_VDD_165_195;
     	mmc->caps  |= MMC_CAP_1_8V_DDR | MMC_CAP_UHS_DDR50 | MMC_CAP_8_BIT_DATA;
-    	mmc->caps  |= MMC_CAP_NONREMOVABLE;
     	mmc->caps2 |= MMC_CAP2_BOOTPART_NOACC;
-    }
+    }*/
     
-    mmc->ocr_avail      = ocr_avail;
-	mmc->ocr_avail_sdio = ocr_avail;
-	mmc->ocr_avail_mmc  = ocr_avail;
-	mmc->ocr_avail_sd   = ocr_avail;
-    
-	host->sdio_irq_enabled = false;
-	
-	host->sdio_mode = of_property_read_bool(parent->of_node, "enable_sdio_mode");
-	
-	if (host->sdio_mode)
-	{
-		INFO_MSG(parent, "sdio mode enabled\n");
-		//mmc->caps |= MMC_CAP_SDIO_IRQ;
-	}
-	else
-	{
-		INFO_MSG(parent, "sdio mode disabled\n");
-		mmc->caps2 |= MMC_CAP2_NO_SDIO;
-	}
-	
 	mmc->ops = &sdiohost_ops;
 	
     host->clk_id = NULL;

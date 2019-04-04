@@ -1,4 +1,7 @@
 ﻿/dts-v1/;
+
+#include <dt-bindings/gpio/gpio.h>
+
 /include/ "skeleton.dtsi"
 
 / {
@@ -101,148 +104,6 @@
 		    interrupts = < 0 55 0x4 >;
 		    arm,tag-latency = <3 3 2>;
 		    arm,data-latency = <5 3 3>;
-	    };
-	    
-	    uart0: serial@b0120000 {
-		    compatible = "caninos,labrador-uart";
-		    reg = <0xb0120000 0x2000>;
-		    interrupts = < 0 29 0x4 >;
-		    status = "disabled";
-	    };
-
-	    uart1: serial@b0122000 {
-		    compatible = "caninos,labrador-uart";
-		    reg = <0xb0122000 0x2000>;
-		    interrupts = < 0 30 0x4 >;
-		    status = "disabled";
-	    };
-
-	    uart2: serial@b0124000 {
-		    compatible = "caninos,labrador-uart";
-		    reg = <0xb0124000 0x2000>;
-		    interrupts = < 0 31 0x4 >;
-		    status = "disabled";
-	    };
-
-	    uart3: serial@b0126000 {
-		    compatible = "caninos,labrador-uart";
-		    reg = <0xb0126000 0x2000>;
-		    interrupts = < 0 32 0x4 >;
-		    clock-frequency = <48000000>;
-		    pinctrl-names = "default";
-		    pinctrl-0 = <&serial3_state_default>;
-		    status = "okay";
-	    };
-
-	    uart4: serial@b0128000 {
-		    compatible = "caninos,labrador-uart";
-		    reg = <0xb0128000 0x2000>;
-		    interrupts = < 0 33 0x4 >;
-		    status = "disabled";
-	    };
-
-	    uart5: serial@b012a000 {
-		    compatible = "caninos,labrador-uart";
-		    reg = <0xb012a000 0x2000>;
-		    interrupts = < 0 34 0x4 >;
-		    status = "disabled";
-	    };
-
-	    uart6: serial@b012c000 {
-		    compatible = "caninos,labrador-uart";
-		    reg = <0xb012c000 0x2000>;
-		    interrupts = < 0 35 0x4 >;
-		    status = "disabled";
-	    };
-	    
-	    i2c0: i2c@b0170000 {
-	    	#address-cells = <1>;
-		    #size-cells = <0>;
-		    compatible = "caninos,labrador-i2c";
-		    reg = <0xb0170000 0x4000>;
-		    interrupts = < 0 25 0x4 >;
-		    status = "disabled";
-	    };
-	    
-	    i2c1: i2c@b0174000 {
-		    #address-cells = <1>;
-		    #size-cells = <0>;
-		    compatible = "caninos,labrador-i2c";
-		    reg = <0xb0174000 0x4000>;
-		    interrupts = < 0 26 0x4 >;
-		    status = "disabled";
-	    };
-
-	    i2c2: i2c@b0178000 {
-		    #address-cells = <1>;
-		    #size-cells = <0>;
-		    compatible = "caninos,labrador-i2c";
-		    reg = <0xb0178000 0x4000>;
-		    interrupts = < 0 27 0x4 >;
-		    status = "disabled";
-	    };
-
-	    i2c3: i2c@b017c000 {
-		    #address-cells = <1>;
-		    #size-cells = <0>;
-		    compatible = "caninos,labrador-i2c";
-		    reg = <0xb017c000 0x4000>;
-		    interrupts = < 0 28 0x4 >;
-		    status = "disabled";
-	    };
-	    
-	    mmc0: mmc@b0230000 {
-	        #address-cells = <1>;
-		    #size-cells = <0>;
-		    compatible = "caninos,labrador-emmc";
-		    reg = <0xb0230000 0x38>;
-		    interrupts = < 0 42 0x4 >;
-		    
-		    pinctrl-names = "default";
-		    pinctrl-0 = <&mmc0_state_default>;
-		    
-		    // [9] MIPI_DSI_DP1 -> card detect
-		    
-		    card_dt_gpio = <&gpio 66 1>;
-		    
-		    status = "okay";
-	    };
-	    
-	    mmc1: mmc@b0234000 {
-	        #address-cells = <1>;
-		    #size-cells = <0>;
-		    compatible = "caninos,labrador-emmc";
-		    reg = <0xb0234000 0x38>;
-		    interrupts = < 0 43 0x4 >;
-		    
-		    pinctrl-names = "default";
-		    pinctrl-0 = <&mmc1_state_default>;
-		    
-		    // MIPI_DSI_DN1         -> bt rst
-            // LCD0_D18(B30)        -> wifi shdn
-            // PCM1_SYNC/PA_EN(D30) -> wifi power enable
-		    
-		    card_pw_gpio = <&gpio 126 0>; // GPIOD30 = 3 * 32 + 30 = 126
-		    card_en_gpio = <&gpio 62 0>;  // GPIOB30 = 32 + 30 = 62
-		    
-		    enable_sdio_mode;
-		    
-            status = "okay";
-	    };
-	    
-	    mmc2: mmc@b0238000 {
-	        #address-cells = <1>;
-		    #size-cells = <0>;
-		    compatible = "caninos,labrador-emmc";
-		    reg = <0xb0238000 0x38>;
-		    interrupts = < 0 44 0x4 >;
-		    
-		    pinctrl-names = "default";
-		    pinctrl-0 = <&mmc2_state_default>;
-		    
-		    low_voltage_support;
-	        
-            status = "okay";
 	    };
 	    
 	    gpio: gpio@b01b0000 {
@@ -362,6 +223,152 @@
 		    };
 	    };
 	    
+	    uart0: serial@b0120000 {
+		    compatible = "caninos,labrador-uart";
+		    reg = <0xb0120000 0x2000>;
+		    interrupts = < 0 29 0x4 >;
+		    status = "disabled";
+	    };
+
+	    uart1: serial@b0122000 {
+		    compatible = "caninos,labrador-uart";
+		    reg = <0xb0122000 0x2000>;
+		    interrupts = < 0 30 0x4 >;
+		    status = "disabled";
+	    };
+
+	    uart2: serial@b0124000 {
+		    compatible = "caninos,labrador-uart";
+		    reg = <0xb0124000 0x2000>;
+		    interrupts = < 0 31 0x4 >;
+		    status = "disabled";
+	    };
+
+	    uart3: serial@b0126000 {
+		    compatible = "caninos,labrador-uart";
+		    reg = <0xb0126000 0x2000>;
+		    interrupts = < 0 32 0x4 >;
+		    clock-frequency = <48000000>;
+		    pinctrl-names = "default";
+		    pinctrl-0 = <&serial3_state_default>;
+		    status = "okay";
+	    };
+
+	    uart4: serial@b0128000 {
+		    compatible = "caninos,labrador-uart";
+		    reg = <0xb0128000 0x2000>;
+		    interrupts = < 0 33 0x4 >;
+		    status = "disabled";
+	    };
+
+	    uart5: serial@b012a000 {
+		    compatible = "caninos,labrador-uart";
+		    reg = <0xb012a000 0x2000>;
+		    interrupts = < 0 34 0x4 >;
+		    status = "disabled";
+	    };
+
+	    uart6: serial@b012c000 {
+		    compatible = "caninos,labrador-uart";
+		    reg = <0xb012c000 0x2000>;
+		    interrupts = < 0 35 0x4 >;
+		    status = "disabled";
+	    };
+	    
+	    i2c0: i2c@b0170000 {
+	    	#address-cells = <1>;
+		    #size-cells = <0>;
+		    compatible = "caninos,labrador-i2c";
+		    reg = <0xb0170000 0x4000>;
+		    interrupts = < 0 25 0x4 >;
+		    status = "disabled";
+	    };
+	    
+	    i2c1: i2c@b0174000 {
+		    #address-cells = <1>;
+		    #size-cells = <0>;
+		    compatible = "caninos,labrador-i2c";
+		    reg = <0xb0174000 0x4000>;
+		    interrupts = < 0 26 0x4 >;
+		    status = "disabled";
+	    };
+
+	    i2c2: i2c@b0178000 {
+		    #address-cells = <1>;
+		    #size-cells = <0>;
+		    compatible = "caninos,labrador-i2c";
+		    reg = <0xb0178000 0x4000>;
+		    interrupts = < 0 27 0x4 >;
+		    status = "disabled";
+	    };
+
+	    i2c3: i2c@b017c000 {
+		    #address-cells = <1>;
+		    #size-cells = <0>;
+		    compatible = "caninos,labrador-i2c";
+		    reg = <0xb017c000 0x4000>;
+		    interrupts = < 0 28 0x4 >;
+		    status = "disabled";
+	    };
+	    
+	    mmc0: mmc@b0230000 {
+	        #address-cells = <1>;
+		    #size-cells = <0>;
+		    
+		    compatible = "caninos,labrador-emmc";
+		    reg = <0xb0230000 0x38>;
+		    
+		    pinctrl-names = "default";
+		    pinctrl-0 = <&mmc0_state_default>;
+		    
+		    interrupts = < 0 42 0x4 >;
+		    
+		    /* [9] MIPI_DSI_DP1 */
+		    card_dt_gpio = <&gpio 66 GPIO_ACTIVE_LOW>;
+		    
+		    device_type = "sdcard";
+		    status = "okay";
+	    };
+	    
+	    mmc1: mmc@b0234000 {
+	        #address-cells = <1>;
+		    #size-cells = <0>;
+		    compatible = "caninos,labrador-emmc";
+		    reg = <0xb0234000 0x38>;
+		    interrupts = < 0 43 0x4 >;
+		    
+		    pinctrl-names = "default";
+		    pinctrl-0 = <&mmc1_state_default>;
+		    
+		    // MIPI_DSI_DN1         -> bt rst
+            // LCD0_D18(B30)        -> wifi shdn
+            // PCM1_SYNC/PA_EN(D30) -> wifi power enable
+		    
+		    card_pw_gpio = <&gpio 126 0>; // GPIOD30 = 3 * 32 + 30 = 126
+		    card_en_gpio = <&gpio 62 0>;  // GPIOB30 = 32 + 30 = 62
+		    
+		    device_type = "sdio";
+		    
+            status = "okay";
+	    };
+	    
+	    mmc2: mmc@b0238000 {
+	        #address-cells = <1>;
+		    #size-cells = <0>;
+		    compatible = "caninos,labrador-emmc";
+		    reg = <0xb0238000 0x38>;
+		    interrupts = < 0 44 0x4 >;
+		    
+		    pinctrl-names = "default";
+		    pinctrl-0 = <&mmc2_state_default>;
+		    
+		    low_voltage_support;
+		    
+		    device_type = "emmc";
+	        
+            status = "okay";
+	    };
+	    
 	    dma@b0260000 {
 		    compatible = "caninos,labrador-dma";
 		    reg = <0xb0260000 0xd00>;
@@ -454,18 +461,6 @@
 
 		    status = "okay";
 	    };
-	    
-	    usb@b0400000 {
-			#address-cells = <1>;
-			#size-cells = <0>;
-			compatible = "actions,atm7059tc-usb";
-			reg = <0xb0400000 0xcd00>,
-			      <0xb040cd00 0x59>;
-			interrupts = < 0 23 0x4 >;
-			usb_serialnumber_config = <1>; /* config serialnumber string format, 0: unified ascii; 1:unified unicode; 2:nounified unicode; 3: nounified ascii*/
-			usb_hs_output_strength = <2>; /*defaut:2,range:0~7; 0:min,7:max;usb high speed(2.0)transmitter output strength*/
-			status = "okay";
-		};
 	    
 	    usb0: usb@b0600000 {
 		    #address-cells = <1>;

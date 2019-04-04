@@ -1,15 +1,7 @@
+// SPDX-License-Identifier: GPL-2.0
 /******************************************************************************
  *
  * Copyright(c) 2007 - 2012 Realtek Corporation. All rights reserved.
- *
- * This program is free software; you can redistribute it and/or modify it
- * under the terms of version 2 of the GNU General Public License as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
- * more details.
  *
  ******************************************************************************/
 
@@ -30,22 +22,17 @@ inline int RTW_STATUS_CODE(int error_code)
 	return _FAIL;
 }
 
-u8 *_rtw_malloc(u32 sz)
+void *_rtw_malloc(u32 sz)
 {
-	u8 *pbuf = NULL;
-
-	pbuf = kmalloc(sz, in_interrupt() ? GFP_ATOMIC : GFP_KERNEL);
-
-	return pbuf;
+	return kmalloc(sz, in_interrupt() ? GFP_ATOMIC : GFP_KERNEL);
 }
 
-u8 *_rtw_zmalloc(u32 sz)
+void *_rtw_zmalloc(u32 sz)
 {
-	u8 *pbuf = _rtw_malloc(sz);
+	void *pbuf = _rtw_malloc(sz);
 
-	if (pbuf != NULL) {
+	if (pbuf)
 		memset(pbuf, 0, sz);
-	}
 
 	return pbuf;
 }
@@ -69,13 +56,6 @@ inline int _rtw_netif_rx(_nic_hdl ndev, struct sk_buff *skb)
 {
 	skb->dev = ndev;
 	return netif_rx(skb);
-}
-
-void rtw_init_timer(_timer *ptimer, void *padapter, void *pfunc)
-{
-	struct adapter *adapter = padapter;
-
-	_init_timer(ptimer, adapter->pnetdev, pfunc, adapter);
 }
 
 void _rtw_init_queue(struct __queue *pqueue)
@@ -157,7 +137,7 @@ static int isFileReadable(char *path)
 		ret = PTR_ERR(fp);
 	}
 	else {
-		oldfs = get_fs(); set_fs(get_ds());
+		oldfs = get_fs(); set_fs(KERNEL_DS);
 
 		if (1!=readFile(fp, &buf, 1))
 			ret = -EINVAL;
@@ -185,7 +165,7 @@ static int retriveFromFile(char *path, u8 *buf, u32 sz)
 		if (0 == (ret =openFile(&fp, path, O_RDONLY, 0))) {
 			DBG_871X("%s openFile path:%s fp =%p\n", __func__, path , fp);
 
-			oldfs = get_fs(); set_fs(get_ds());
+			oldfs = get_fs(); set_fs(KERNEL_DS);
 			ret =readFile(fp, buf, sz);
 			set_fs(oldfs);
 			closeFile(fp);
@@ -470,7 +450,7 @@ struct rtw_cbuf *rtw_cbuf_alloc(u32 size)
 {
 	struct rtw_cbuf *cbuf;
 
-	cbuf = (struct rtw_cbuf *)rtw_malloc(sizeof(*cbuf) + sizeof(void*)*size);
+	cbuf = rtw_malloc(sizeof(*cbuf) + sizeof(void *) * size);
 
 	if (cbuf) {
 		cbuf->write = cbuf->read = 0;

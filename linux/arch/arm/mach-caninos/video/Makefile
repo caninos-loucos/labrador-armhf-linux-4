@@ -1,2 +1,2 @@
-obj-y += dss/ displays/ fb/ switch/ vde/
+obj-y += dss/ displays/ fb/
 

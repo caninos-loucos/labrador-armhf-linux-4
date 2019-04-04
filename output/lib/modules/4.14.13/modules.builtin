@@ -690,6 +690,10 @@ kernel/sound/core/seq/snd-seq.ko
 kernel/sound/core/seq/snd-seq-dummy.ko
 kernel/sound/core/seq/snd-seq-midi.ko
 kernel/sound/core/seq/snd-seq-midi-event.ko
+kernel/sound/soc/snd-soc-core.ko
+kernel/sound/soc/generic/snd-soc-simple-card-utils.ko
+kernel/sound/soc/generic/snd-soc-simple-card.ko
+kernel/sound/soc/generic/snd-soc-simple-scu-card.ko
 kernel/arch/arm/oprofile/oprofile.ko
 kernel/net/802/p8022.ko
 kernel/net/802/psnap.ko

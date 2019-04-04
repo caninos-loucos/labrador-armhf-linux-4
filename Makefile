@@ -8,6 +8,8 @@ all: clean config kernel
 config:
 	$(Q)mkdir $(CURDIR)/build
 	$(Q)$(MAKE) -C $(CURDIR)/linux O=$(CURDIR)/build CROSS_COMPILE=arm-linux-gnueabihf- ARCH=arm caninos_labrador_defconfig
+	
+menuconfig:
 	$(Q)$(MAKE) -C $(CURDIR)/linux O=$(CURDIR)/build CROSS_COMPILE=arm-linux-gnueabihf- ARCH=arm menuconfig
 	
 kernel:

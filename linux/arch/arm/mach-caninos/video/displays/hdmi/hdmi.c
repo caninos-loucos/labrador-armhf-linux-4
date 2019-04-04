@@ -39,12 +39,7 @@ struct hdmi_core hdmi;
 
 struct timer_list hdmi_timer;
 
-struct switch_dev hdev = {
-	.name = "hdmi",
-};
-struct switch_dev hdev_audio = {
-	.name = "audio_hdmi",
-};
+
 struct hdmi_property
 {
 	int hdcp_onoff;
@@ -446,12 +441,13 @@ void hdmi_send_uevent(bool data)
 
 	if(data){
 		if(atomic_read(&hdmi_status)==0){
-			//HDMI_DEBUG("parse_edid start\n");
+
 			parse_edid(&hdmi.edid);
 			check_best_vid_from_edid(&hdmi.edid);
-			//HDMI_DEBUG("parse_edid end\n");		
-			if(hdmi.data.hpd_en){	
-				switch_set_state(&hdev, 1);	
+	
+				
+			if(hdmi.data.hpd_en)
+			{
 				atomic_set(&hdmi_status, 1);			
 			}else{
 				if(hdmi.dssdev != NULL 
@@ -463,8 +459,8 @@ void hdmi_send_uevent(bool data)
 		}
 	}else{
 		if((atomic_read(&hdmi_status)==1)&&hdmi.data.send_uevent){
-			if(hdmi.data.hpd_en){
-				switch_set_state(&hdev, 0);
+			if(hdmi.data.hpd_en)
+			{
 				atomic_set(&hdmi_status, 0);					
 			}else{
 				if(hdmi.dssdev != NULL 
@@ -481,6 +477,7 @@ void hdmi_send_uevent(bool data)
 
 }
 static bool old_hotplug_state = false;
+
 void hdmi_cable_check(struct work_struct *work)
 {
 
@@ -491,7 +488,7 @@ void hdmi_cable_check(struct work_struct *work)
 			
 			if(!hdmi.data.hpd_en){
 				if(hdmi.ip_data.settings.hdmi_mode == HDMI_HDMI){
-					switch_set_state(&hdev_audio, new_hotplug_state ? 1: 2);
+					///
 				}
 			}
 			
@@ -780,7 +777,7 @@ int owldss_hdmi_display_enable(struct owl_dss_device *dssdev)
 					msecs_to_jiffies(50));
 	}			
 	if(hdmi.ip_data.settings.hdmi_mode == HDMI_HDMI){
-		switch_set_state(&hdev_audio, 1);
+		//switch_set_state(&hdev_audio, 1);
 	}
 	/*hdmi_dump_regs();*/
 	
@@ -840,7 +837,7 @@ void owldss_hdmi_display_disable(struct owl_dss_device *dssdev)
 	owl_dss_stop_device(dssdev);
 	
 	if(hdmi.ip_data.settings.hdmi_mode == HDMI_HDMI){
-		switch_set_state(&hdev_audio, 2);
+		//switch_set_state(&hdev_audio, 2);
 	}
 
 	mutex_unlock(&hdmi.lock);
@@ -1067,25 +1064,30 @@ static int platform_hdmihw_probe(struct platform_device *pdev)
 	int r;
 	struct resource * hdmihw_mem;
 	const struct of_device_id *id = of_match_device(atm70xx_hdmi_of_match, &pdev->dev);	
-	//DEBUG_ON("Enter owldss_hdmihw_probe\n");
-	if(id != NULL){
+	
+	if(id != NULL)
+	{
 		struct ic_info * info = (struct ic_info *)id->data;	
-		if(info != NULL){
-			//HDMI_DEBUG("hdmi info ic_type 0x%x \n",info->ic_type);
-			if(info->ic_type == IC_TYPE_ATM7039C){
+		
+		if(info != NULL)
+		{
+			if(info->ic_type == IC_TYPE_ATM7039C)
+			{
 				hdmi.hdmihw_diff = &hdmi_atm7039c;
-			}else if(info->ic_type == IC_TYPE_ATM7059TC){	
+			}
+			else if(info->ic_type == IC_TYPE_ATM7059TC)
+			{	
 				hdmi.hdmihw_diff = &hdmi_atm7059tc;
 			}
-			else if(info->ic_type == IC_TYPE_ATM7059A){	
+			else if(info->ic_type == IC_TYPE_ATM7059A)
+			{	
 				hdmi.hdmihw_diff = &hdmi_atm7059a;
 			}
-		}else{
-			//HDMI_DEBUG("hdmi info is null\n");
 		}
 	}
 	
-	if(of_get_hdmi_data(pdev, &hdmi_data)){
+	if(of_get_hdmi_data(pdev, &hdmi_data))
+	{
 		DEBUG_ERR("of_get_hdmi_data error\n");
 		return -1;
 	}
@@ -1096,20 +1098,25 @@ static int platform_hdmihw_probe(struct platform_device *pdev)
 	mutex_init(&hdmi.ip_data.lock);
 
 	/* Base address taken from platform */
+	
 	hdmihw_mem = platform_get_resource(hdmi.pdev, IORESOURCE_MEM, 0);
-	if (!hdmihw_mem) {
+	
+	if (!hdmihw_mem)
+	{
 		DEBUG_ERR("hdmihw_mem platform_get_resource ERROR\n");
-		r = -EINVAL;
-		goto err1;
+		return -EINVAL;
 	}
 	
 	hdmi.ip_data.base = devm_ioremap_resource(&pdev->dev, hdmihw_mem);
-	if (IS_ERR(hdmi.ip_data.base)){	
+	
+	if (IS_ERR(hdmi.ip_data.base))
+	{	
 		DEBUG_ERR("hdmi.ip_data.base error\n");
 		return PTR_ERR(hdmi.ip_data.base);
-	}	
-	HDMI_DEBUG("base=%p\n", hdmi.ip_data.base);		
+	}
+		
 	r = hdmi_probe_pdata(pdev);
+	
 	if (r) {
 		return r;
 	}
@@ -1125,34 +1132,21 @@ static int platform_hdmihw_probe(struct platform_device *pdev)
 	INIT_DELAYED_WORK(&hdmi_cable_check_work, hdmi_cable_check);
 	
 	INIT_WORK(&irq_work, do_hpd_irq);
-
 	
-	
-	queue_delayed_work(hdmi.ip_data.hdcp.wq, &hdmi.ip_data.hdcp.hdcp_read_key_work,
-					msecs_to_jiffies(50));
- 
-	r = switch_dev_register(&hdev);
-	if (r)
-		goto err1;
-	r = switch_dev_register(&hdev_audio);
-	if (r)
-		goto err2;	
-		
+	queue_delayed_work(hdmi.ip_data.hdcp.wq, &hdmi.ip_data.hdcp.hdcp_read_key_work, msecs_to_jiffies(50));
+					
 	ddc_init();
 	
 	hdmi.data.cable_check_onoff = 1;
 	hdmi.data.send_uevent = 1;
 	hdmi.edid.isHDMI = HDMI_HDMI;
 	is_probe_called = true;
-	if(is_hdmi_power_on()){
+	
+	if (is_hdmi_power_on()) {
 	 	old_hotplug_state = true;
 	}
-	return 0;
 	
-err2:
-	switch_dev_unregister(&hdev);
-err1:
-	return r;	
+	return 0;
 }
 
 static int platform_hdmihw_remove(struct platform_device *pdev)
