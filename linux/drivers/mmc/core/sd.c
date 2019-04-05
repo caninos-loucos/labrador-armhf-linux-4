@@ -856,6 +856,12 @@ int mmc_sd_setup_card(struct mmc_host *host, struct mmc_card *card,
 
 		/* Erase init depends on CSD and SSR */
 		mmc_init_erase(card);
+		
+		/* Caninos ----> */
+		/* fix bug cmd 6 crc7 error */
+		/* we must set 2M high clk */
+		mmc_set_clock(host, 2000000);
+		/* Caninos <---- */
 
 		/*
 		 * Fetch switch information from card.

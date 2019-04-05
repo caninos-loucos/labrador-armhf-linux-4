@@ -5,7 +5,7 @@ obj-y += hdmac.o serial.o
 obj-y += emmc.o
 obj-y += usb/
 obj-y += video/
-obj-y += sound/
+#obj-y += sound/
 
 
 #
