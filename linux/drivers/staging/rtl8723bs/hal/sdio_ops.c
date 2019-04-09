@@ -937,8 +937,7 @@ static struct recv_buf *sd_recv_rxfifo(struct adapter *adapter, u32 size)
 	u8 *readbuf;
 	struct recv_priv *recv_priv;
 	struct recv_buf	*recvbuf;
-
-
+	
 	/*  Patch for some SDIO Host 4 bytes issue */
 	/*  ex. RK3188 */
 	readsize = RND4(size);
@@ -946,7 +945,9 @@ static struct recv_buf *sd_recv_rxfifo(struct adapter *adapter, u32 size)
 	/* 3 1. alloc recvbuf */
 	recv_priv = &adapter->recvpriv;
 	recvbuf = rtw_dequeue_recvbuf(&recv_priv->free_recv_buf_queue);
-	if (!recvbuf) {
+	
+	if (!recvbuf)
+	{
 		DBG_871X_LEVEL(_drv_err_, "%s: alloc recvbuf FAIL!\n", __func__);
 		return NULL;
 	}
@@ -975,7 +976,12 @@ static struct recv_buf *sd_recv_rxfifo(struct adapter *adapter, u32 size)
 	/* 3 3. read data from rxfifo */
 	readbuf = recvbuf->pskb->data;
 	ret = sdio_read_port(&adapter->iopriv.intf, WLAN_RX0FF_DEVICE_ID, readsize, readbuf);
-	if (ret == _FAIL) {
+	
+	if (ret == _FAIL)
+	{
+		/* Caninos Patch Start */
+		rtw_enqueue_recvbuf(recvbuf, &recv_priv->free_recv_buf_queue);
+		/* Caninos Patch End */
 		RT_TRACE(_module_hci_ops_os_c_, _drv_err_, ("%s: read port FAIL!\n", __func__));
 		return NULL;
 	}
