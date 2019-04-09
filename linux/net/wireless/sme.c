@@ -748,9 +748,13 @@ void __cfg80211_connect_result(struct net_device *dev,
 		cfg80211_sme_free(wdev);
 		return;
 	}
-
-	if (WARN_ON(!cr->bss))
+	
+	/* Caninos Patch Start */
+	if (!cr->bss)
+	{
 		return;
+	}
+	/* Caninos Patch End */
 
 	wdev->current_bss = bss_from_pub(cr->bss);
 

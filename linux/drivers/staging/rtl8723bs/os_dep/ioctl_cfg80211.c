@@ -480,22 +480,26 @@ void rtw_cfg80211_indicate_connect(struct adapter *padapter)
 	struct wireless_dev *pwdev = padapter->rtw_wdev;
 
 	DBG_871X(FUNC_ADPT_FMT"\n", FUNC_ADPT_ARG(padapter));
-	if (pwdev->iftype != NL80211_IFTYPE_STATION
-		&& pwdev->iftype != NL80211_IFTYPE_P2P_CLIENT
-	) {
+	
+	if (pwdev->iftype != NL80211_IFTYPE_STATION && 
+	    pwdev->iftype != NL80211_IFTYPE_P2P_CLIENT)
+	{
 		return;
 	}
 
 	if (check_fwstate(pmlmepriv, WIFI_AP_STATE) == true)
+	{
 		return;
-
+	}
+	
+	
+	
 	{
 		struct wlan_bssid_ex  *pnetwork = &(padapter->mlmeextpriv.mlmext_info.network);
 		struct wlan_network *scanned = pmlmepriv->cur_network_scanned;
-
-		/* DBG_871X(FUNC_ADPT_FMT" BSS not found\n", FUNC_ADPT_ARG(padapter)); */
-
-		if (scanned == NULL) {
+		
+		if (scanned == NULL)
+		{
 			rtw_warn_on(1);
 			goto check_bss;
 		}
@@ -517,15 +521,21 @@ void rtw_cfg80211_indicate_connect(struct adapter *padapter)
 		}
 	}
 
+
 check_bss:
 	if (!rtw_cfg80211_check_bss(padapter))
+	{
 		DBG_871X_LEVEL(_drv_always_, FUNC_ADPT_FMT" BSS not found !!\n", FUNC_ADPT_ARG(padapter));
+	}
 
-	if (rtw_to_roam(padapter) > 0) {
+	if (rtw_to_roam(padapter) > 0)
+	{
 		struct wiphy *wiphy = pwdev->wiphy;
 		struct ieee80211_channel *notify_channel;
+		
 		u32 freq;
 		u16 channel = cur_network->network.Configuration.DSConfig;
+		
 		struct cfg80211_roam_info roam_info = {};
 
 		freq = rtw_ieee80211_channel_to_frequency(channel, NL80211_BAND_2GHZ);
@@ -533,6 +543,7 @@ check_bss:
 		notify_channel = ieee80211_get_channel(wiphy, freq);
 
 		DBG_871X(FUNC_ADPT_FMT" call cfg80211_roamed\n", FUNC_ADPT_ARG(padapter));
+		
 		roam_info.channel = notify_channel;
 		roam_info.bssid = cur_network->network.MacAddress;
 		roam_info.req_ie =
@@ -543,6 +554,7 @@ check_bss:
 			pmlmepriv->assoc_rsp+sizeof(struct ieee80211_hdr_3addr)+6;
 		roam_info.resp_ie_len =
 			pmlmepriv->assoc_rsp_len-sizeof(struct ieee80211_hdr_3addr)-6;
+			
 		cfg80211_roamed(padapter->pnetdev, &roam_info, GFP_ATOMIC);
 	}
 	else
