@@ -1869,9 +1869,7 @@ static void mmc_blk_issue_rw_rq(struct mmc_queue *mq, struct request *new_req)
 			}
 			break;
 		case MMC_BLK_CMD_ERR:
-			/* Caninos ----> */
-			/*req_pending = mmc_blk_rw_cmd_err(md, card, brq, old_req, req_pending);*/
-			/* Caninos <---- */
+			req_pending = mmc_blk_rw_cmd_err(md, card, brq, old_req, req_pending);
 			if (mmc_blk_reset(md, card->host, type)) {
 				if (req_pending)
 					mmc_blk_rw_cmd_abort(mq, card, old_req, mq_rq);
@@ -1888,13 +1886,8 @@ static void mmc_blk_issue_rw_rq(struct mmc_queue *mq, struct request *new_req)
 			break;
 		case MMC_BLK_RETRY:
 			retune_retry_done = brq->retune_retry_done;
-			/* Caninos ----> */
-			/*if (retry++ < 5) */
-			/*	break; */
-			if (retry++ < 16)
+			if (retry++ < 5)
 				break;
-			/* Caninos <---- */
-			
 			/* Fall through */
 		case MMC_BLK_ABORT:
 			if (!mmc_blk_reset(md, card->host, type))

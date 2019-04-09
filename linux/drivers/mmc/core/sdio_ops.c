@@ -85,21 +85,27 @@ static int mmc_io_rw_direct_host(struct mmc_host *host, int write, unsigned fn,
 	cmd.flags = MMC_RSP_SPI_R5 | MMC_RSP_R5 | MMC_CMD_AC;
 
 	err = mmc_wait_for_cmd(host, &cmd, 0);
+	
 	if (err)
 		return err;
-
+	
 	if (mmc_host_is_spi(host)) {
 		/* host driver already reported errors */
-	} else {
+	} 
+	else
+	{
 		if (cmd.resp[0] & R5_ERROR)
 			return -EIO;
+			
 		if (cmd.resp[0] & R5_FUNCTION_NUMBER)
 			return -EINVAL;
+			
 		if (cmd.resp[0] & R5_OUT_OF_RANGE)
 			return -ERANGE;
 	}
 
-	if (out) {
+	if (out)
+	{
 		if (mmc_host_is_spi(host))
 			*out = (cmd.resp[0] >> 8) & 0xFF;
 		else

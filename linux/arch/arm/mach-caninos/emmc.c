@@ -9,7 +9,6 @@
 #include <linux/of_gpio.h>
 #include <linux/clk.h>
 #include <linux/pinctrl/consumer.h>
-#include <linux/regulator/consumer.h>
 #include <linux/platform_device.h>
 #include <linux/dmaengine.h>
 #include <linux/dma-mapping.h>
@@ -22,17 +21,6 @@
 #include <mach/clkname.h>
 #include <mach/hdmac-owl.h>
 #include <mach/hardware.h>
-
-// Uncoment the line below to enable debug messages.
-#define DEBUG 
-
-#ifdef DEBUG
-#define INFO_MSG(dev,...) dev_info(dev,__VA_ARGS__)
-#else
-#define INFO_MSG(dev,...)
-#endif
-
-#define ERR_MSG(dev,...) dev_err(dev,__VA_ARGS__)
 
 // DMA mode config
 
@@ -120,7 +108,8 @@
 #define SD_STATE_RC16ER			(1 << 1)
 #define SD_STATE_CRC7ER			(1 << 0)
 
-//
+extern void wifibt_turn_on(void);
+extern void wifibt_turn_off(void);
 
 struct sdiohost
 {
@@ -128,7 +117,6 @@ struct sdiohost
     const char * clk_id;
     
     struct mmc_host * mmc;
-    struct regulator * reg;
     struct pinctrl * pcl;
     struct clk * clk;
     
@@ -148,13 +136,8 @@ struct sdiohost
     u32 chip_select;
     u32 bus_width;
     
-    bool ddr_enabled;
-    
 	bool sdio_mode;
-    
-    int card_en_gpio;
-    int card_pw_gpio;
-    int card_dt_gpio;
+	bool scc;
     
     enum dma_data_direction	dma_dir;
     struct dma_slave_config dma_conf;
@@ -165,25 +148,6 @@ struct sdiohost
     
     u32 dma_wmode, dma_rmode;
 };
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 static void sdc_reset_hardware_state_mach(struct mmc_host * mmc)
 {
@@ -241,15 +205,16 @@ static int sdiohost_dma_prepare_data(struct mmc_host * mmc, struct mmc_data *dat
 	
 	if (dmaengine_slave_config(host->dma, &host->dma_conf))
 	{
-		ERR_MSG(mmc->parent, "failed to configure DMA channel\n");
+		dev_err(mmc->parent, "failed to configure DMA channel\n");
 		return -EINVAL;
 	}
 
-	host->desc = dmaengine_prep_slave_sg(host->dma, data->sg, sglen, slave_dirn, DMA_PREP_INTERRUPT | DMA_CTRL_ACK);
+	host->desc = dmaengine_prep_slave_sg
+		(host->dma, data->sg, sglen, slave_dirn, DMA_PREP_INTERRUPT | DMA_CTRL_ACK);
 		
 	if (!host->desc)
 	{
-		ERR_MSG(mmc->parent, "dmaengine_prep_slave_sg failed\n");
+		dev_err(mmc->parent, "dmaengine_prep_slave_sg failed\n");
 		return -EBUSY;
 	}
 
@@ -382,12 +347,10 @@ static void sdiohost_snd_rcv(struct mmc_host * mmc, struct mmc_command *cmd,
         writel(blksz, host->iobase + SD_BLK_SIZE_OFFSET);
         writel(blocks, host->iobase + SD_BLK_NUM_OFFSET);
         
-        if (total < 512)
-        {
+        if (total < 512) {
         	writel(total, host->iobase + SD_BUF_SIZE_OFFSET);
         }
-        else
-        {
+        else {
         	writel(512, host->iobase + SD_BUF_SIZE_OFFSET);
         }
     }
@@ -424,7 +387,7 @@ static void sdiohost_snd_rcv(struct mmc_host * mmc, struct mmc_command *cmd,
     
     if (total != 0 && wait_for_completion_timeout(&host->dma_complete, msecs_to_jiffies(2000)) == 0)
     {
-        ERR_MSG(mmc->parent, "CMD%u ARG = 0x%x - dma operation timeout\n", opcode, arg);
+        dev_err(mmc->parent, "CMD%u ARG = 0x%x - dma operation timeout\n", opcode, arg);
         sdc_reset_hardware_state_mach(mmc);
         dmaengine_terminate_all(host->dma);
         
@@ -439,7 +402,7 @@ static void sdiohost_snd_rcv(struct mmc_host * mmc, struct mmc_command *cmd,
     
     if (!(state & SD_STATE_CLC))
     {
-        ERR_MSG(mmc->parent, "CMD%u ARG = 0x%x - transmission timeout\n", opcode, arg);
+        dev_err(mmc->parent, "CMD%u ARG = 0x%x - transmission timeout\n", opcode, arg);
         sdc_reset_hardware_state_mach(mmc);
         
         *err_cmd  = -ETIMEDOUT;
@@ -452,7 +415,7 @@ static void sdiohost_snd_rcv(struct mmc_host * mmc, struct mmc_command *cmd,
     {
         if (state & SD_STATE_CLNR)
         {
-        	INFO_MSG(mmc->parent, "CMD%u ARG = 0x%x - no response\n", opcode, arg);
+        	dev_err(mmc->parent, "CMD%u ARG = 0x%x - no response\n", opcode, arg);
             sdc_reset_hardware_state_mach(mmc);
             
             *err_cmd  = -EILSEQ;
@@ -463,7 +426,7 @@ static void sdiohost_snd_rcv(struct mmc_host * mmc, struct mmc_command *cmd,
         
         if (crc && state & SD_STATE_CRC7ER)
         {
-            INFO_MSG(mmc->parent, "CMD%u ARG = 0x%x - response crc error\n", opcode, arg);
+            dev_err(mmc->parent, "CMD%u ARG = 0x%x - response crc error\n", opcode, arg);
             sdc_reset_hardware_state_mach(mmc);
             
             *err_cmd  = -EILSEQ;
@@ -498,7 +461,7 @@ static void sdiohost_snd_rcv(struct mmc_host * mmc, struct mmc_command *cmd,
 	    { 
 	        if (state & SD_STATE_WC16ER)
 	        {
-	            INFO_MSG(mmc->parent, "CMD%u ARG = 0x%x - write data crc error\n", opcode, arg);
+	            dev_err(mmc->parent, "CMD%u ARG = 0x%x - write data crc error\n", opcode, arg);
                 sdc_reset_hardware_state_mach(mmc);
                 
                 *err_data = -EILSEQ;
@@ -510,7 +473,7 @@ static void sdiohost_snd_rcv(struct mmc_host * mmc, struct mmc_command *cmd,
 	    {
 	        if (state & SD_STATE_RC16ER)
 	        {
-	            INFO_MSG(mmc->parent, "CMD%u ARG = 0x%x - read data crc error\n", opcode, arg);
+	            dev_err(mmc->parent, "CMD%u ARG = 0x%x - read data crc error\n", opcode, arg);
                 sdc_reset_hardware_state_mach(mmc);
                 
                 *err_data = -EILSEQ;
@@ -535,7 +498,7 @@ static void sdiohost_request(struct mmc_host * mmc, struct mmc_request * mrq)
     {
     	if (!mrq->cmd) 
     	{
-    		ERR_MSG(mmc->parent, "data transfer only request not supported\n");
+    		dev_err(mmc->parent, "data transfer only request not supported\n");
     		mrq->data->error = -EINVAL;
     		mmc_request_done(mmc, mrq);
     		return;
@@ -543,7 +506,7 @@ static void sdiohost_request(struct mmc_host * mmc, struct mmc_request * mrq)
     	
         if (sdiohost_dma_prepare_data(mmc, mrq->data) < 0)
         {
-        	ERR_MSG(mmc->parent, "dma prepare data error\n");
+        	dev_err(mmc->parent, "dma prepare data error\n");
         	mrq->data->error = -EINVAL;
             mmc_request_done(mmc, mrq);
             return;
@@ -576,49 +539,10 @@ static void sdiohost_request(struct mmc_host * mmc, struct mmc_request * mrq)
     mmc_request_done(mmc, mrq);
 }
 
-
-
-
-
-static void controller_set_ddr(struct mmc_host * mmc, bool activate)
-{
-    struct sdiohost * host = mmc_priv(mmc);
-    u32 enable;
-
-    if (host->power_mode == MMC_POWER_OFF) {
-        return;
-    }
-    
-    if (activate == host->ddr_enabled) {
-        return;
-    }
-    
-    enable = readl(host->iobase + SD_EN_OFFSET);
-    smp_rmb();
-    
-    enable &= ~SD_EN_DDREN;
-    
-    if (activate)
-    {
-        enable |= SD_EN_DDREN;
-        INFO_MSG(mmc->parent, "ddr mode enabled\n");
-    }
-    else {
-        INFO_MSG(mmc->parent, "ddr mode disabled\n");
-    }
-    
-    writel(enable, host->iobase + SD_EN_OFFSET);
-    smp_wmb();
-    
-    host->ddr_enabled = activate;
-}
-
 static void set_timing(struct mmc_host * mmc, u32 freq)
 {
     struct sdiohost * host = mmc_priv(mmc);
     u32 mode;
-    
-    INFO_MSG(mmc->parent, "timing adjusted to freq %u\n", freq);
     
     mode = readl(host->iobase + SD_CTL_OFFSET);
 	mode &= ~(0xff << 16);
@@ -647,12 +571,14 @@ static void set_timing(struct mmc_host * mmc, u32 freq)
 	writel(mode, host->iobase + SD_CTL_OFFSET);
 }
 
-static void controller_set_bus_width(struct mmc_host * mmc, u32 bus_width)
+static void controller_set_bus_width_chip_sel
+	(struct mmc_host * mmc, u32 bus_width, u32 chip_select)
 {
     struct sdiohost * host = mmc_priv(mmc);
     u32 enable;
     
-    if (bus_width == host->bus_width) {
+    if ((bus_width == host->bus_width) &&
+    	(chip_select == host->chip_select)) {
         return;
     }
     
@@ -662,22 +588,22 @@ static void controller_set_bus_width(struct mmc_host * mmc, u32 bus_width)
     switch (bus_width)
     {
     case MMC_BUS_WIDTH_1:
-        INFO_MSG(mmc->parent, "bus width set to 1 bit\n");
+        if (chip_select == MMC_CS_HIGH) {
+			enable |= 0x1;
+    	}
         break;
     
     case MMC_BUS_WIDTH_4:
-        INFO_MSG(mmc->parent, "bus width set to 4 bits\n");
         enable |= 0x1;
         break;
         
     case MMC_BUS_WIDTH_8:
-        INFO_MSG(mmc->parent, "bus width set to 8 bits\n");
         enable |= 0x2;
         break;
     }
 
     writel(enable, host->iobase + SD_EN_OFFSET);
-    
+    host->chip_select = chip_select;
     host->bus_width = bus_width;
 }
 
@@ -690,56 +616,54 @@ static void set_actual_clock(struct mmc_host * mmc, int freq)
         return;
     }
     
-    INFO_MSG(mmc->parent, "controller clock set to %u\n", freq);
     host->actual_clock = freq;
     
     rate = clk_round_rate(host->clk, freq);
+    
     clk_set_rate(host->clk, rate);
+    
     mdelay(1);
     
     set_timing(mmc, freq);
 }
 
+static void controller_scc(struct mmc_host * mmc, bool enable)
+{
+	struct sdiohost * host = mmc_priv(mmc);
+    u32 mode;
+    
+	mode = readl(host->iobase + SD_CTL_OFFSET);
+	
+	mode &= ~SD_CTL_SCC;
+	
+	if (enable) {
+    	mode |= SD_CTL_SCC;
+    }
+    
+    writel(mode, host->iobase + SD_CTL_OFFSET);
+}
+
 static void controller_set_clock(struct mmc_host * mmc, int freq)
 {
     struct sdiohost * host = mmc_priv(mmc);
-    u32 mode;
     
     if (freq == host->clock) {
         return;
     }
     
-    set_actual_clock(mmc, freq);
+    if ((freq == 0) && (host->scc)) {
+    	controller_scc(mmc, false);
+    }
+    else
+    {
+    	set_actual_clock(mmc, freq);
+    	
+    	if (host->scc) {
+    		controller_scc(mmc, true);
+    	}
+    }
     
-    mode = readl(host->iobase + SD_CTL_OFFSET);
-    
-	if (freq == 0)
-	{
-	    INFO_MSG(mmc->parent, "clock to card disabled\n");
-	    mode &= ~SD_CTL_SCC;
-	}
-	else
-	{
-	    INFO_MSG(mmc->parent, "clock to card enabled\n");
-	    mode |= SD_CTL_SCC;
-	}
-	
-	writel(mode, host->iobase + SD_CTL_OFFSET);
 	host->clock = freq;
-}
-
-static void controller_send_init_clk(struct mmc_host * mmc)
-{
-	struct sdiohost * host = mmc_priv(mmc);
-	u32 mode;
-	
-	reinit_completion(&host->sdc_complete);
-	
-	mode = readl(host->iobase + SD_CTL_OFFSET) & (0xff << 16);
-	mode |= SD_CTL_TS | SD_CTL_TCN(5) | SD_CTL_TM(8);
-	writel(mode, host->iobase + SD_CTL_OFFSET);
-	
-	wait_for_completion_timeout(&host->sdc_complete, HZ);
 }
 
 static void controller_power_off(struct mmc_host * mmc)
@@ -750,17 +674,7 @@ static void controller_power_off(struct mmc_host * mmc)
         return;
     }
     
-    INFO_MSG(mmc->parent, "device power off\n");
-    
     host->power_mode = MMC_POWER_OFF;
-    
-    if (host->card_pw_gpio >= 0) {
-        gpio_set_value(host->card_pw_gpio, 0);
-    }
-    
-    if (host->card_en_gpio >= 0) {
-        gpio_set_value(host->card_en_gpio, 0);
-    }
     
     host->clock          = -1;
 	host->actual_clock   = -1;
@@ -768,36 +682,55 @@ static void controller_power_off(struct mmc_host * mmc)
     host->chip_select    = MMC_CS_DONTCARE;
     host->bus_width      = MMC_BUS_WIDTH_1;
     
-    host->ddr_enabled = false;
-    
     module_clk_disable(host->module_id);
+    
+    if (host->module_id == MOD_ID_SD1) {
+    	wifibt_turn_off();
+    }
 }
 
 static void controller_power_on(struct mmc_host * mmc)
 {
     struct sdiohost * host = mmc_priv(mmc);
-    u32 state, enable;
     
     if (host->power_mode == MMC_POWER_ON) {
         return;
     }
     
-    INFO_MSG(mmc->parent, "device power on\n");
-    
     host->power_mode = MMC_POWER_ON;
+}
+
+static void controller_send_init_clk(struct mmc_host * mmc)
+{
+	struct sdiohost * host = mmc_priv(mmc);
+	u32 mode, enable, state;
+	
+	// set CS to high
+	enable = readl(host->iobase + SD_EN_OFFSET);
+    enable &= ~0x3;
+    enable |= 0x1;
+    writel(enable, host->iobase + SD_EN_OFFSET);
     
-    state = readl(host->iobase + SD_STATE_OFFSET);
+    // turn on wifi/bt card
+    if (host->module_id == MOD_ID_SD1) {
+    	wifibt_turn_on();
+    }
+
+	// enable interrupts
+	reinit_completion(&host->sdc_complete);
+	
+	state = readl(host->iobase + SD_STATE_OFFSET);
     state |= SD_STATE_TEIE;
     writel(state, host->iobase + SD_STATE_OFFSET);
-  
-    if (host->sdio_mode)
-    {
-    	enable = readl(host->iobase + SD_EN_OFFSET);
-    	enable |= SD_EN_SDIOEN;
-    	writel(enable, host->iobase + SD_EN_OFFSET);
-    }
     
-    controller_send_init_clk(mmc);
+    // send 80 clocks
+	mode = SD_CTL_TS  | SD_CTL_TCN(5) | SD_CTL_TM(8);
+	mode |= (readl(host->iobase + SD_CTL_OFFSET) & (0xff << 16));
+	writel(mode, host->iobase + SD_CTL_OFFSET);
+	
+	if (!wait_for_completion_timeout(&host->sdc_complete, HZ)) {
+		dev_err(mmc->parent, "send 80 init clock timeout\n");
+	}
 }
 
 static void controller_power_up(struct mmc_host * mmc)
@@ -809,69 +742,39 @@ static void controller_power_up(struct mmc_host * mmc)
     	return;
     }
     
-    INFO_MSG(mmc->parent, "device power up\n");
+    host->power_mode   = MMC_POWER_UP;
+    host->chip_select  = MMC_CS_HIGH;
+    host->bus_width    = MMC_BUS_WIDTH_1;
     
-    host->power_mode = MMC_POWER_UP;
-    
-    if (host->card_pw_gpio >= 0) {
-        gpio_direction_output(host->card_pw_gpio, 0);
-    }
-    
-    if (host->card_en_gpio >= 0) {
-        gpio_direction_output(host->card_en_gpio, 0);
-    }
-    
-    module_reset(host->module_id);
     module_clk_enable(host->module_id);
+    module_reset(host->module_id);
+    
+    mdelay(5);
     
     set_actual_clock(mmc, mmc->f_init);
     
     enable = readl(host->iobase + SD_EN_OFFSET);
-    enable |= SD_ENABLE | SD_EN_RESE;
+    enable |= SD_ENABLE;
     writel(enable, host->iobase + SD_EN_OFFSET);
-    
-    if (host->card_pw_gpio >= 0)
-    {
-    	mdelay(10);
-        gpio_set_value(host->card_pw_gpio, 1);
-    }
-    
-    if (host->card_en_gpio >= 0)
-    {
-    	mdelay(10);
-        gpio_set_value(host->card_en_gpio, 1);
-    }
-}
-
-static void controller_chip_select(struct mmc_host * mmc, u32 chip_select)
-{
-    struct sdiohost * host = mmc_priv(mmc);
-    u32 enable;
-    
-    if (chip_select == host->chip_select) {
-        return;
-    }
-    
-    if (host->bus_width != MMC_BUS_WIDTH_1) {
-        return;
-    }
     
     enable = readl(host->iobase + SD_EN_OFFSET);
-    
-    enable &= ~0x3;
-    
-    if (chip_select == MMC_CS_HIGH)
-    {
-		enable |= 0x1;
-		INFO_MSG(mmc->parent, "chip select set to high\n");
-    }
-    else
-    {
-        INFO_MSG(mmc->parent, "chip select set to low\n");
-    }
-
+    enable |= SD_EN_RESE;
     writel(enable, host->iobase + SD_EN_OFFSET);
-    host->chip_select = chip_select;
+    
+    mdelay(1);
+    
+    controller_send_init_clk(mmc);
+    
+    if (host->scc) {
+    	controller_scc(mmc, true);
+    }
+    
+    if (host->sdio_mode)
+    {
+    	enable = readl(host->iobase + SD_EN_OFFSET);
+    	enable |= SD_EN_SDIOEN;
+    	writel(enable, host->iobase + SD_EN_OFFSET);
+    }
 }
 
 static void sdiohost_set_ios(struct mmc_host * mmc, struct mmc_ios * ios)
@@ -893,20 +796,7 @@ static void sdiohost_set_ios(struct mmc_host * mmc, struct mmc_ios * ios)
 	
 	controller_set_clock(mmc, ios->clock);
 	
-	controller_set_bus_width(mmc, ios->bus_width);
-	
-	controller_chip_select(mmc, ios->chip_select);
-	
-	
-	
-	
-	
-	/*if (ios->timing == MMC_TIMING_UHS_DDR50 || ios->timing == MMC_TIMING_MMC_DDR52) {
-	    controller_set_ddr(mmc, true);
-	}
-	else {
-	    controller_set_ddr(mmc, false);
-	}*/
+	controller_set_bus_width_chip_sel(mmc, ios->bus_width, ios->chip_select);
 }
 
 static void sdiohost_enable_sdio_irq(struct mmc_host * mmc, int enable)
@@ -923,16 +813,12 @@ static void sdiohost_enable_sdio_irq(struct mmc_host * mmc, int enable)
 		state |= SD_STATE_SDIOA_EN;
 		state &= ~SD_STATE_SDIOA_P;
 		state &= ~SD_STATE_TEI;
-		
-		INFO_MSG(mmc->parent, "controller sdio irq enabled\n");
 	}
 	else
 	{
 		state |= SD_STATE_SDIOA_P;
 		state &= ~SD_STATE_SDIOA_EN;
 		state &= ~SD_STATE_TEI;
-		
-		INFO_MSG(mmc->parent, "controller sdio irq disabled\n");
 	}
 	
 	writel(state, host->iobase + SD_STATE_OFFSET);
@@ -961,8 +847,7 @@ static irqreturn_t irq_handler(int irqnum, void * param)
     
     if (host->mmc->caps & MMC_CAP_SDIO_IRQ)
     {
-    	if ((state & SD_STATE_SDIOA_P) && (state & SD_STATE_SDIOA_EN))
-    	{
+    	if ((state & SD_STATE_SDIOA_P) && (state & SD_STATE_SDIOA_EN)) {
 			mmc_signal_sdio_irq(host->mmc);
 		}
     }
@@ -979,14 +864,12 @@ static int sdiohost_voltage_switch(struct mmc_host * mmc, struct mmc_ios * ios)
     switch (ios->signal_voltage)
     {
     case MMC_SIGNAL_VOLTAGE_330:
-    	INFO_MSG(mmc->parent, "voltage set to 3.3V\n");
     	break;
     
     case MMC_SIGNAL_VOLTAGE_180:
 		enable = readl(host->iobase + SD_EN_OFFSET);
 		enable |= SD_EN_S18EN;
 		writel(enable, host->iobase + SD_EN_OFFSET);
-		INFO_MSG(mmc->parent, "voltage set to 1.8V\n");
 		break;
 	
 	default:
@@ -1004,18 +887,16 @@ static int sdiohost_card_busy(struct mmc_host * mmc)
 	
 	state = readl(host->iobase + SD_STATE_OFFSET);
 	
-	if ((state & SD_STATE_CMDS) && (state & SD_STATE_DAT0S)) {
-		return 1;
+	if ((state & SD_STATE_CMDS) && (state & SD_STATE_DAT0S))
+	{
+		return 0;
 	}
 	
-	return 0;
+	return 1;
 }
 
-static const struct mmc_host_ops sdiohost_ops =
-{
+static const struct mmc_host_ops sdiohost_ops = {
     .request = sdiohost_request,
-    
-    
     .set_ios = sdiohost_set_ios,
 	.enable_sdio_irq = sdiohost_enable_sdio_irq,
 	.start_signal_voltage_switch = sdiohost_voltage_switch,
@@ -1036,7 +917,6 @@ static int sdiohost_init(struct sdiohost * host, struct platform_device * pdev)
     struct resource * res;
     dma_cap_mask_t mask;
     char buffer[32];
-    const char * pm;
     int ret, dev_type;
     const char *out;
     
@@ -1047,22 +927,21 @@ static int sdiohost_init(struct sdiohost * host, struct platform_device * pdev)
     init_completion(&host->dma_complete);
     init_completion(&host->sdc_complete);
     
-	host->clock        = -1;
+	host->clock = -1;
 	host->actual_clock = -1;
-    host->power_mode   = MMC_POWER_UNDEFINED;
-    host->chip_select  = MMC_CS_DONTCARE;
-    host->bus_width    = MMC_BUS_WIDTH_1;
-    host->card_en_gpio = -1;
-    host->card_pw_gpio = -1;
-    host->card_dt_gpio = -1;
-   
-    host->ddr_enabled = false;
+	
+    host->power_mode = MMC_POWER_UNDEFINED;
+    host->chip_select = MMC_CS_DONTCARE;
+    host->bus_width = MMC_BUS_WIDTH_1;
+    
+    host->scc = false;
+    host->sdio_mode = false;
     
     ret = of_property_read_string(parent->of_node, "device_type", &out);
     
     if (ret < 0)
     {
-    	ERR_MSG(parent, "could not get device type from DTS\n");
+    	dev_err(parent, "could not get device type from DTS\n");
 		goto out;
     }
     
@@ -1077,7 +956,7 @@ static int sdiohost_init(struct sdiohost * host, struct platform_device * pdev)
     }
     else
     {
-    	ERR_MSG(parent, "unrecognized device type\n");
+    	dev_err(parent, "unrecognized device type\n");
     	ret = -EINVAL;
 		goto out;
     }
@@ -1097,7 +976,6 @@ static int sdiohost_init(struct sdiohost * host, struct platform_device * pdev)
     
     mmc->caps  = MMC_CAP_4_BIT_DATA | MMC_CAP_WAIT_WHILE_BUSY;
     mmc->caps |= MMC_CAP_SD_HIGHSPEED | MMC_CAP_MMC_HIGHSPEED;
-    mmc->caps |= MMC_CAP_UHS_SDR12 | MMC_CAP_UHS_SDR25 | MMC_CAP_UHS_SDR50;
     mmc->caps2 = MMC_CAP2_NO_WRITE_PROTECT | MMC_CAP2_BOOTPART_NOACC;
     
     switch (dev_type)
@@ -1105,21 +983,18 @@ static int sdiohost_init(struct sdiohost * host, struct platform_device * pdev)
     case DEV_SDCARD:
     	mmc->caps  |= MMC_CAP_ERASE | MMC_CAP_NEEDS_POLL;
     	mmc->caps2 |= MMC_CAP2_NO_SDIO | MMC_CAP2_NO_MMC;
-    	host->sdio_mode = false;
     	break;
     	
     case DEV_EMMC:
     	mmc->caps  |= MMC_CAP_ERASE | MMC_CAP_NONREMOVABLE;
     	mmc->caps2 |= MMC_CAP2_NO_SD | MMC_CAP2_NO_SDIO;
-    	mmc->ocr_avail |= MMC_VDD_165_195;
-    	//mmc->caps  |= MMC_CAP_1_8V_DDR | MMC_CAP_UHS_DDR50 | MMC_CAP_8_BIT_DATA;
-    	host->sdio_mode = false;
     	break;
     	
     case DEV_SDIO:
-    	mmc->caps  |= MMC_CAP_SDIO_IRQ;
-    	mmc->caps2 |= MMC_CAP2_NO_SD | MMC_CAP2_NO_MMC;
+    	mmc->caps  |= MMC_CAP_SDIO_IRQ | MMC_CAP_NONREMOVABLE;
+    	mmc->caps2 |= MMC_CAP2_NO_MMC;
     	host->sdio_mode = true;
+    	host->scc = true;
     	break;
     }
     
@@ -1135,7 +1010,7 @@ static int sdiohost_init(struct sdiohost * host, struct platform_device * pdev)
 	
 	if (IS_ERR(host->pcl))
 	{
-	    ERR_MSG(parent, "could not get default pinctrl\n");
+	    dev_err(parent, "could not get default pinctrl\n");
 		ret = -ENODEV;
 		goto out;
 	}
@@ -1144,14 +1019,14 @@ static int sdiohost_init(struct sdiohost * host, struct platform_device * pdev)
 	
 	if (!res)
 	{
-		ERR_MSG(parent, "no memory resource\n");
+		dev_err(parent, "no memory resource\n");
 		ret = -ENODEV;
 		goto out_put_pinctrl;
 	}
 	
 	if (!request_mem_region(res->start, resource_size(res), pdev->name))
 	{
-		ERR_MSG(parent, "unable to request memory region\n");
+		dev_err(parent, "unable to request memory region\n");
 		ret = -EBUSY;
 		goto out_put_pinctrl;
 	}
@@ -1160,7 +1035,7 @@ static int sdiohost_init(struct sdiohost * host, struct platform_device * pdev)
 	
 	if (host->iobase == NULL)
 	{
-		ERR_MSG(parent, "unable to remap memory region\n");
+		dev_err(parent, "unable to remap memory region\n");
 		ret = -ENXIO;
 		goto out_put_pinctrl;
 	}
@@ -1172,7 +1047,7 @@ static int sdiohost_init(struct sdiohost * host, struct platform_device * pdev)
 	
 	if (host->dma == NULL)
 	{
-	    ERR_MSG(parent, "failed to request DMA channel\n");
+	    dev_err(parent, "failed to request DMA channel\n");
 		ret = -ENODEV;
 		goto out_put_pinctrl;
 	}
@@ -1213,7 +1088,7 @@ static int sdiohost_init(struct sdiohost * host, struct platform_device * pdev)
 	
 	if (!res)
 	{
-		ERR_MSG(parent, "no irq resource\n");
+		dev_err(parent, "no irq resource\n");
 		ret = -ENODEV;
 		goto out_free_dma;
 	}
@@ -1224,7 +1099,7 @@ static int sdiohost_init(struct sdiohost * host, struct platform_device * pdev)
 	
 	if (ret < 0)
 	{
-		ERR_MSG(parent, "irq request failed\n");
+		dev_err(parent, "irq request failed\n");
 		goto out_free_dma;
 	}
 	
@@ -1232,113 +1107,20 @@ static int sdiohost_init(struct sdiohost * host, struct platform_device * pdev)
 	
 	if (IS_ERR(host->clk))
 	{
-	    ERR_MSG(parent, "could not get device clock\n");
+	    dev_err(parent, "could not get device clock\n");
 		ret = -ENODEV;
 		goto out_free_irq;
 	}
 	
-	host->card_dt_gpio = of_get_named_gpio(parent->of_node, "card_dt_gpio", 0);
+	ret = mmc_add_host(mmc);
 	
-	if (gpio_is_valid(host->card_dt_gpio))
+	if (ret < 0)
 	{
-		snprintf(buffer, sizeof(buffer), "sdc_dt_gpio_mod%u", host->module_id);
-		
-		ret = gpio_request(host->card_dt_gpio, buffer);
-	
-	    if (ret < 0)
-	    {
-	        ERR_MSG(parent, "could not claim card detect gpio\n");
-		    goto out_free_clk;
-	    }
-	}
-	else
-	{
-		INFO_MSG(parent, "card detect gpio disabled by DTS\n");
-		host->card_dt_gpio = -1;
+		dev_err(parent, "could not add mmc host\n");
+		goto out_free_clk;
 	}
 	
-	host->card_pw_gpio = of_get_named_gpio(parent->of_node, "card_pw_gpio", 0);
-	
-	if (gpio_is_valid(host->card_pw_gpio))
-	{
-		snprintf(buffer, sizeof(buffer), "sdc_pw_gpio_mod%u", host->module_id);
-		
-		ret = gpio_request(host->card_pw_gpio, buffer);
-	
-	    if (ret < 0)
-	    {
-	        ERR_MSG(parent, "could not claim card power gpio\n");
-		    goto out_free_dt_gpio;
-	    }
-	}
-	else
-	{
-		INFO_MSG(parent, "card power gpio disabled by DTS\n");
-		host->card_pw_gpio = -1;
-	}
-	
-	host->card_en_gpio = of_get_named_gpio(parent->of_node, "card_en_gpio", 0);
-	
-	if (gpio_is_valid(host->card_en_gpio))
-	{
-		snprintf(buffer, sizeof(buffer), "sdc_en_gpio_mod%u", host->module_id);
-		
-		ret = gpio_request(host->card_en_gpio, buffer);
-	
-	    if (ret < 0)
-	    {
-	        ERR_MSG(parent, "could not claim card enable gpio\n");
-		    goto out_free_pw_gpio;
-	    }
-	}
-	else
-	{
-		INFO_MSG(parent, "card enable gpio disabled by DTS\n");
-		host->card_en_gpio = -1;
-	}
-	
-	host->reg = NULL;
-	
-	if (of_find_property(parent->of_node, "card_vcc", NULL))
-	{
-		ret = of_property_read_string(parent->of_node, "card_vcc", &pm);
-		
-		if (ret < 0)
-		{
-			ERR_MSG(parent, "could not read card vcc power source\n");
-			goto out_free_en_gpio;
-		}
-
-		host->reg = regulator_get(NULL, pm);
-		
-		if (IS_ERR(host->reg))
-		{
-			ERR_MSG(parent, "could not get card vcc power source\n");
-			ret = -ENODEV;
-			goto out_free_en_gpio;
-		}
-
-		regulator_enable(host->reg);
-	}
-	
-	mmc_add_host(mmc);  
     return 0;
-    
-
-out_free_en_gpio:
-	if (host->card_en_gpio >= 0) {
-		gpio_free(host->card_en_gpio);
-	}
-	
-out_free_pw_gpio:
-	if (host->card_pw_gpio >= 0) {
-		gpio_free(host->card_pw_gpio);
-	}
-
-out_free_dt_gpio:
-	if (host->card_dt_gpio >= 0) {
-		gpio_free(host->card_dt_gpio);
-	}
 
 out_free_clk:
 	clk_put(host->clk);
@@ -1368,7 +1150,7 @@ static int __init emmc_driver_probe(struct platform_device * pdev)
     
     if (!mmc)
     {
-        ERR_MSG(&pdev->dev, "host allocation failed\n");
+        dev_err(&pdev->dev, "host allocation failed\n");
         return -ENOMEM;
     }
     
@@ -1399,24 +1181,6 @@ static int __exit emmc_driver_remove(struct platform_device *pdev)
 		host = mmc_priv(mmc);
 		
 		mmc_remove_host(mmc);
-		
-		if (host->card_dt_gpio >= 0) {
-			gpio_free(host->card_dt_gpio);
-		}
-		
-		if (host->card_pw_gpio >= 0) {
-			gpio_free(host->card_pw_gpio);
-		}
-		
-		if (host->card_en_gpio >= 0) {
-			gpio_free(host->card_en_gpio);
-		}
-		
-		if (host->reg)
-		{
-			regulator_disable(host->reg);
-			regulator_put(host->reg);
-		}
 		
 		clk_put(host->clk);
 		

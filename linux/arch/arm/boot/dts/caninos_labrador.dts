@@ -311,6 +311,14 @@
 		    status = "disabled";
 	    };
 	    
+	    wifibt {
+	    	compatible = "caninos,labrador-wifibt";
+	    	
+	    	wifi_power_gpio  = <&gpio 126 GPIO_ACTIVE_HIGH>; // GPIOD30
+		    wifi_enable_gpio = <&gpio  62 GPIO_ACTIVE_HIGH>; // GPIOB30
+		    bt_enable_gpio   = <&gpio  67 GPIO_ACTIVE_HIGH>; // GPIOC3
+		};
+	    
 	    mmc0: mmc@b0230000 {
 	        #address-cells = <1>;
 		    #size-cells = <0>;
@@ -321,10 +329,7 @@
 		    pinctrl-names = "default";
 		    pinctrl-0 = <&mmc0_state_default>;
 		    
-		    interrupts = < 0 42 0x4 >;
-		    
-		    /* [9] MIPI_DSI_DP1 */
-		    card_dt_gpio = <&gpio 66 GPIO_ACTIVE_LOW>;
+		    interrupts = <0 42 0x4>;
 		    
 		    device_type = "sdcard";
 		    status = "okay";
@@ -335,20 +340,12 @@
 		    #size-cells = <0>;
 		    compatible = "caninos,labrador-emmc";
 		    reg = <0xb0234000 0x38>;
-		    interrupts = < 0 43 0x4 >;
+		    interrupts = <0 43 0x4>;
 		    
 		    pinctrl-names = "default";
 		    pinctrl-0 = <&mmc1_state_default>;
 		    
-		    // MIPI_DSI_DN1         -> bt rst
-            // LCD0_D18(B30)        -> wifi shdn
-            // PCM1_SYNC/PA_EN(D30) -> wifi power enable
-		    
-		    card_pw_gpio = <&gpio 126 0>; // GPIOD30 = 3 * 32 + 30 = 126
-		    card_en_gpio = <&gpio 62 0>;  // GPIOB30 = 32 + 30 = 62
-		    
 		    device_type = "sdio";
-		    
             status = "okay";
 	    };
 	    
@@ -357,22 +354,22 @@
 		    #size-cells = <0>;
 		    compatible = "caninos,labrador-emmc";
 		    reg = <0xb0238000 0x38>;
-		    interrupts = < 0 44 0x4 >;
+		    interrupts = <0 44 0x4>;
 		    
 		    pinctrl-names = "default";
 		    pinctrl-0 = <&mmc2_state_default>;
 		    
-		    low_voltage_support;
-		    
 		    device_type = "emmc";
-	        
             status = "okay";
 	    };
 	    
 	    dma@b0260000 {
 		    compatible = "caninos,labrador-dma";
 		    reg = <0xb0260000 0xd00>;
-		    interrupts = < 0 57 0x4 >, < 0 58 0x4 >, < 0 59 0x4 >, < 0 60 0x4 >;
+		    interrupts = <0 57 0x4>, 
+		                 <0 58 0x4>,
+		                 <0 59 0x4>,
+		                 <0 60 0x4>;
 		    status = "okay";
 	    };
 	    
