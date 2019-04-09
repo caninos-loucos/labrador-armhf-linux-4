@@ -412,13 +412,7 @@
 	    
 	    hdmi@b02c0000{
 		    compatible = "caninos,labrador-hdmi";
-		    reg = <0xb02c0000 0x160>;
-		    hdcp_onoff = <0>;
-		    channel_invert = <0>;
-		    bit_invert = <0>;
-		    hotplugable = <1>;
-		    bootable = <1>; 
-		    bootrotate = <0>;   
+		    reg = <0xb02c0000 0x160>;  
 		    default_resolution = "1920x1080p-60";
 	    };
 	

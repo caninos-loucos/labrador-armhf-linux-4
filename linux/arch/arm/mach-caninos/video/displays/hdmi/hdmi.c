@@ -39,7 +39,6 @@ struct hdmi_core hdmi;
 
 struct timer_list hdmi_timer;
 
-
 struct hdmi_property
 {
 	int hdcp_onoff;
@@ -71,24 +70,13 @@ static bool is_probe_called = false;
 struct ic_info {
 	int ic_type;
 };
-
-static struct ic_info  atm7039c_data = {
-   .ic_type = IC_TYPE_ATM7039C,
-};
-
-static  struct ic_info atm7059tc_data = {
-   .ic_type = IC_TYPE_ATM7059TC,
-};
  
 static  struct ic_info atm7059a_data = {
    .ic_type = IC_TYPE_ATM7059A,
 };
 
 static const struct of_device_id atm70xx_hdmi_of_match[] = {
-
-
 	{.compatible = "caninos,labrador-hdmi", .data = &atm7059a_data},
-
 	{}
 };
 
@@ -251,7 +239,7 @@ static bool  is_hdmi_power_on(void)
 	return ((hdmihw_read_reg(HDMI_CR) & 0x01) != 0);
 }
 
-#define DECLK2_MIN		150000000
+#define DECLK2_MIN	150000000
 
 static unsigned long de_clk2_rate = 0;
 
@@ -275,7 +263,6 @@ void save_declk_and_switch_for_hdmi(void)
 		clk_prepare(de2_clk);
 		
 	    clk_enable(de2_clk);
-	    printk("save_declk_and_switch_for_hdmi de2_new_clk %ld MHZ\n " ,de2_new_clk);
 	}	
 }
 
@@ -285,7 +272,7 @@ void restore_declk_for_hdmi(void)
 	unsigned long  de2_new_clk = 0;
 	
 	de2_clk     = clk_get(NULL, CLKNAME_DE2_CLK);
-	printk("restore_declk_for_hdmi de_clk2_rate %ld MHZ\n " ,de_clk2_rate);
+
 	if(de_clk2_rate != 0 && clk_get_rate(de2_clk) != de_clk2_rate)
 	{
 	
@@ -303,9 +290,12 @@ static int hdmi_power_on_full(struct owl_dss_device *dssdev)
 	int r;
 	struct owl_overlay_manager *mgr = dssdev->manager;
 			
-	if(hdmi.ip_data.cfg.cm.code == VID1280x720P_60_DVI){
+	if(hdmi.ip_data.cfg.cm.code == VID1280x720P_60_DVI)
+	{
 		hdmi.ip_data.settings.hdmi_mode = HDMI_DVI;
-	}else{
+	}
+	else
+	{
 		hdmi.ip_data.settings.hdmi_mode = hdmi.edid.isHDMI;
 	}
 	
@@ -314,16 +304,12 @@ static int hdmi_power_on_full(struct owl_dss_device *dssdev)
 		dss_mgr_enable(mgr);
 		return 0;
 	}
+	
 	hdmi.ip_data.ops->hdmi_reset(&hdmi.ip_data);
-	
 	hdmi.ip_data.ops->pmds_ldo_enable(&hdmi.ip_data,true);
-
-	hdmi.ip_data.ops->hdmi_clk24Men(&hdmi.ip_data, 1);	
-	
-	hdmi.ip_data.ops->pll_enable(&hdmi.ip_data);	
-	
-	hdmi.ip_data.ops->hpd_clear_plug(&hdmi.ip_data);	
-	
+	hdmi.ip_data.ops->hdmi_clk24Men(&hdmi.ip_data, 1);
+	hdmi.ip_data.ops->pll_enable(&hdmi.ip_data);
+	hdmi.ip_data.ops->hpd_clear_plug(&hdmi.ip_data);
 	hdmi.ip_data.ops->hpd_enable(&hdmi.ip_data, 1);
 	
 	r = dss_mgr_enable(mgr);
@@ -332,12 +318,9 @@ static int hdmi_power_on_full(struct owl_dss_device *dssdev)
 	
 		
 	hdmi.ip_data.ops->video_configure(&hdmi.ip_data);
-
 	hdmi.ip_data.ops->video_enable(&hdmi.ip_data);
-	
 	hdmi.ip_data.ops->phy_enable(&hdmi.ip_data);		
-
-
+	
 	return 0;
 
 err_mgr_enable:
@@ -402,20 +385,23 @@ static int hdmi_probe_pdata(struct platform_device *pdev)
 
 static int check_best_vid_from_edid(struct hdmi_edid *edid)
 {
-	int best_vid;
+	int best_vid = OWL_TV_MOD_DVI;
 	int i = 0;	
 	
-	if(boot_hdmi_vid != -1)	{
-		
+	if(boot_hdmi_vid != -1)	
+	{
 		best_vid =  boot_hdmi_vid;
 		boot_hdmi_vid = -1;
 		
-	}else if(hdmi.edid.read_ok){
-		
+	}
+	else if(hdmi.edid.read_ok)
+	{
 		if(user_config_vid != -1
 			&& hdmi_check_vid_available(user_config_vid)){
 			best_vid = user_config_vid;
-		}else{
+		}
+		else
+		{
 			for (i = 0; i < ARRAY_SIZE(cea_timings); i++) {	
 				if(hdmi_check_vid_available(cea_timings[i].cm.vid)){			
 					best_vid = cea_timings[i].cm.vid;
@@ -423,11 +409,12 @@ static int check_best_vid_from_edid(struct hdmi_edid *edid)
 				}
 			}
 		}		
-	}else{
-		if(user_config_vid != -1){
+	}
+	else
+	{
+		if(user_config_vid != -1)
+		{
 			best_vid = user_config_vid;
-		}else{
-			best_vid = OWL_TV_MOD_DVI;
 		}
 	}
 		
@@ -439,17 +426,19 @@ void hdmi_send_uevent(bool data)
 {
 	mutex_lock(&hdmi.ip_data.lock);
 
-	if(data){
-		if(atomic_read(&hdmi_status)==0){
-
+	if(data)
+	{
+		if(atomic_read(&hdmi_status)==0)
+		{
 			parse_edid(&hdmi.edid);
 			check_best_vid_from_edid(&hdmi.edid);
-	
-				
+			
 			if(hdmi.data.hpd_en)
 			{
 				atomic_set(&hdmi_status, 1);			
-			}else{
+			}
+			else
+			{
 				if(hdmi.dssdev != NULL 
 					&& hdmi.dssdev->driver != NULL 
 					&& hdmi.dssdev->driver->hot_plug_nodify){
@@ -457,7 +446,8 @@ void hdmi_send_uevent(bool data)
 				}
 			}
 		}
-	}else{
+	}
+	else{
 		if((atomic_read(&hdmi_status)==1)&&hdmi.data.send_uevent){
 			if(hdmi.data.hpd_en)
 			{
@@ -476,33 +466,28 @@ void hdmi_send_uevent(bool data)
 	mutex_unlock(&hdmi.ip_data.lock);
 
 }
+
 static bool old_hotplug_state = false;
 
 void hdmi_cable_check(struct work_struct *work)
 {
-
-	if(hdmi.data.cable_check_onoff){
+	if(hdmi.data.cable_check_onoff)
+	{
 		bool new_hotplug_state = hdmi.ip_data.ops->cable_check(&hdmi.ip_data);
-		if(old_hotplug_state != new_hotplug_state){			
+		
+		if(old_hotplug_state != new_hotplug_state)
+		{			
 			hdmi_send_uevent(new_hotplug_state);
-			
-			if(!hdmi.data.hpd_en){
-				if(hdmi.ip_data.settings.hdmi_mode == HDMI_HDMI){
-					///
-				}
-			}
-			
 			old_hotplug_state = new_hotplug_state;
 		}		
 	}
-	queue_delayed_work(hdmi.ip_data.hdcp.wq, &hdmi_cable_check_work,
-				msecs_to_jiffies(2000));
+	
+	queue_delayed_work(hdmi.ip_data.hdcp.wq, &hdmi_cable_check_work, msecs_to_jiffies(2000));
 }
 
 int hdmi_cable_check_init(void)
 {
-	queue_delayed_work(hdmi.ip_data.hdcp.wq, &hdmi_cable_check_work,
-				msecs_to_jiffies(2000));
+	queue_delayed_work(hdmi.ip_data.hdcp.wq, &hdmi_cable_check_work, msecs_to_jiffies(2000));
 	return 0;
 }
 
@@ -510,8 +495,8 @@ extern void hdmi_cec_irq_handler(void);
 
 static irqreturn_t hdmi_irq_handle(int irq, void *data)
 {
-	//DEBUG_ON("[%s start]\n", __func__);
 	u32 status = hdmi.ip_data.ops->get_irq_state(&hdmi.ip_data);
+	
 	if(status & HDMI_HPD_IRQ)
 	{
 		hdmi.data.hpd_pending  = hdmi.ip_data.ops->detect(&hdmi.ip_data);
@@ -519,7 +504,9 @@ static irqreturn_t hdmi_irq_handle(int irq, void *data)
 		hdmi.data.hdcp_ri      = check_ri_irq();	
 		hdmi.ip_data.ops->hpd_enable(&hdmi.ip_data, 0);		
 		schedule_work(&irq_work);
-	}else{
+	}
+	else
+	{
 		hdmi_cec_irq_handler();
 	}	
 
@@ -529,51 +516,57 @@ static irqreturn_t hdmi_irq_handle(int irq, void *data)
 static void do_hpd_irq(struct work_struct *work) 
 {
 	bool sta_new;	
-	//DEBUG_ON("~~~~~~~~~~~~~irq_handler  %d\n", hdmi.data.hdmi_sta);
-	if(hdmi.data.hpd_pending){
-		if(hdmi_data.hdcp_onoff){
+
+	if(hdmi.data.hpd_pending)
+	{
+		if(hdmi_data.hdcp_onoff) {
 			msleep(10);
-		}else{
+		}
+		else {
 			msleep(50);
 		}
+		
 		sta_new = hdmi.ip_data.ops->cable_check(&hdmi.ip_data);
-		//DEBUG_ON("sta_new %d old %d\n", sta_new, hdmi.data.cable_status);
-		if(sta_new==hdmi.data.cable_status){
-			if(sta_new){
-				//DEBUG_ON("~~~~~~~~~~~~~hdmi plug in\n");					
+
+		if(sta_new == hdmi.data.cable_status)
+		{
+			if(sta_new) {
 				hdmi_send_uevent(1);
-			}else{
-				//DEBUG_ON("~~~~~~~~~~~~~hdmi plug out\n");
+			}
+			else {
 				hdmi_send_uevent(0);
 			}
 		}
+		
 		hdmi.data.hpd_pending = false;
 	}
 	
 	mutex_lock(&hdmi.lock);	
+	
 	hdmi.ip_data.ops->hpd_clear_plug(&hdmi.ip_data);	
 	hdmi.ip_data.ops->hpd_enable(&hdmi.ip_data, 1);
+	
 	mutex_unlock(&hdmi.lock);	
 	
-	if((hdmi_data.hdcp_onoff) && (hdmi.data.hdcp_ri)){
+	if((hdmi_data.hdcp_onoff) && (hdmi.data.hdcp_ri)) {
         hdcp_check_ri();
 	}
-	
 }
 
 int owldss_hdmi_display_check_timing(struct owl_dss_device *dssdev,
 					struct owl_video_timings *timings)
 {
-	
 	int i = 0;
-	for (i = 0; i < ARRAY_SIZE(cea_timings); i++) {
+	
+	for (i = 0; i < ARRAY_SIZE(cea_timings); i++)
+	{
 		if (owl_times_is_equal(&cea_timings[i].timings,timings)){
 			return 0;
 		}
 	}
 	return -1;
 }
-void owldss_hdmi_display_set_timing(struct owl_dss_device *dssdev,struct owl_video_timings *timings)
+void owldss_hdmi_display_set_timing(struct owl_dss_device *dssdev, struct owl_video_timings *timings)
 {
 	struct owl_video_timings *dss_timings = &dssdev->timings;
 	int vid = hdmi_get_vid_by_times(timings);
@@ -582,12 +575,12 @@ void owldss_hdmi_display_set_timing(struct owl_dss_device *dssdev,struct owl_vid
 	
 	mutex_lock(&hdmi.lock);
 	
-	if (timings != NULL){
-			memcpy(dss_timings,timings,sizeof(struct owl_video_timings));
-			memcpy(&hdmi.ip_data.cfg.timings,timings,sizeof(struct owl_video_timings));			
-	}else{
-		printk("owldss_hdmi_display_set_timing NULL  \n");
-	}	
+	if (timings != NULL)
+	{
+		memcpy(dss_timings,timings,sizeof(struct owl_video_timings));
+		memcpy(&hdmi.ip_data.cfg.timings,timings,sizeof(struct owl_video_timings));			
+	}
+
 	hdmi.ip_data.cfg.cm.vid = vid;
 	hdmi.ip_data.cfg.cm.code = hdmi_get_code_by_vid(vid);
 	hdmi.ip_data.cfg.cm.mode = hdmi.edid.isHDMI;	
@@ -604,19 +597,15 @@ void owldss_hdmi_display_set_vid(struct owl_dss_device *dssdev,int vid)
 	
 	timings = hdmi_get_timings_by_vid(vid);
 	
-	printk("timings : xres %d yres %d size of %d %d \n",timings->x_res,timings->y_res,sizeof(struct owl_video_timings),sizeof(struct owl_video_timings*));
-	
-	if (timings != NULL){
-			memcpy(dss_timings,timings,sizeof(struct owl_video_timings));
-			memcpy(&hdmi.ip_data.cfg.timings,timings,sizeof(struct owl_video_timings));			
-	}else{
-		printk("hdmi_get_timings NULL  \n");
-	}	
+	if (timings != NULL)
+	{
+		memcpy(dss_timings,timings,sizeof(struct owl_video_timings));
+		memcpy(&hdmi.ip_data.cfg.timings,timings,sizeof(struct owl_video_timings));			
+	}
+		
 	hdmi.ip_data.cfg.cm.vid = vid;
 	hdmi.ip_data.cfg.cm.code = hdmi_get_code_by_vid(vid);
 	hdmi.ip_data.cfg.cm.mode = hdmi.edid.isHDMI;	
-	
-	//DEBUG_ON("owldss_hdmi_display_set_vid vid %d ,code %d mode %d  \n",hdmi.ip_data.cfg.cm.vid,hdmi.ip_data.cfg.cm.code,hdmi.ip_data.cfg.cm.mode);
 	
 	mutex_unlock(&hdmi.lock);
 }
@@ -624,31 +613,36 @@ void owldss_hdmi_display_set_vid(struct owl_dss_device *dssdev,int vid)
 void owldss_hdmi_display_get_vid(struct owl_dss_device *dssdev, int *vid)
 {    
 	mutex_lock(&hdmi.lock);
+	
 	*vid = hdmi.ip_data.cfg.cm.vid;
-	//DEBUG_ON("owldss_hdmi_display_get_vid %d \n",*vid);
+	
 	mutex_unlock(&hdmi.lock);
 }
 
 void owldss_hdmi_display_enable_hotplug(struct owl_dss_device *dssdev, bool enable)
 {
-	if(!hdmi_data.hotplugable)
-	{
+	if(!hdmi_data.hotplugable) {
 		 return;
 	}
-	mutex_lock(&hdmi.lock);	
-	//HDMI_DEBUG("owldss_hdmi_display_enable_hotplug  enable %d\n", enable);
+	
+	mutex_lock(&hdmi.lock);
+	
 	hdmi.ip_data.ops->hpd_enable(&hdmi.ip_data, enable);
-	if(enable){
+	
+	if(enable)
+	{
 		hdmi.data.hpd_en = 1;
-		if(hdmi.ip_data.ops->cable_check(&hdmi.ip_data)){
-			//HDMI_DEBUG("owldss_hdmi_display_enable_hotplug  switch_set_state 1\n");
+		
+		if(hdmi.ip_data.ops->cable_check(&hdmi.ip_data)) {
 			hdmi_send_uevent(1);
 		}
-	}else{
-		if(hdmi.ip_data.ops->cable_check(&hdmi.ip_data)){
-			//HDMI_DEBUG("owldss_hdmi_display_enable_hotplug  switch_set_state 0\n");
+	}
+	else
+	{
+		if(hdmi.ip_data.ops->cable_check(&hdmi.ip_data)) {
 			hdmi_send_uevent(0);
 		}
+		
 		hdmi.data.hpd_en = 0;
 	}
 	mutex_unlock(&hdmi.lock);
@@ -658,38 +652,47 @@ void owldss_hdmi_display_enable_hdcp(struct owl_dss_device *dssdev, bool enable)
 {
 	mutex_lock(&hdmi.lock);	
 	
-	if(enable){
+	if(enable) {
 		hdmi_data.hdcp_onoff = 1;
-	}else{
+	}
+	else {
 		hdmi_data.hdcp_onoff = 0;
 	}
+	
 	mutex_unlock(&hdmi.lock);
 }
 
 int owldss_hdmi_display_get_vid_cap(struct owl_dss_device *dssdev, int *vid_cap)
 {
-	int i=0;
-	int vid = 0;
+	int i = 0, vid = 0;
+	
 	mutex_lock(&hdmi.lock);
-	if(hdmi.edid.video_formats[0]==0){
-		if(hdmi.ip_data.ops->cable_check(&hdmi.ip_data)){
-			//HDMI_DEBUG("parse_edid start\n");
-			parse_edid(&hdmi.edid);
-			//HDMI_DEBUG("parse_edid end\n");	
-		}else{
-			hdmi.edid.video_formats[0]=0x80090014;
-			//DEBUG_ERR("NO HDMI CABLE\n");
+	
+	if(hdmi.edid.video_formats[0]==0)
+	{
+		if(hdmi.ip_data.ops->cable_check(&hdmi.ip_data))
+		{
+			parse_edid(&hdmi.edid);	
+		}
+		else
+		{
+			hdmi.edid.video_formats[0] = 0x80090014;
 		}	
 	}
-	for (i = 0; i < ARRAY_SIZE(cea_timings); i++) {
-		vid =  cea_timings[i].cm.vid;			
-		if(hdmi_check_vid_available(vid)){			
+	
+	for (i = 0; i < ARRAY_SIZE(cea_timings); i++)
+	{
+		vid =  cea_timings[i].cm.vid;
+				
+		if(hdmi_check_vid_available(vid))
+		{			
 			*vid_cap = i;		
 			vid_cap++;	
 		}
 	}
 	
-	if(hdmi.edid.read_ok==0){
+	if(hdmi.edid.read_ok == 0)
+	{
 		*vid_cap = OWL_TV_MOD_DVI;		
 		vid_cap++;				
 	}
@@ -716,70 +719,58 @@ void owldss_hdmi_display_get_overscan(struct owl_dss_device *dssdev, u16 * over_
 
 int owldss_hdmi_read_edid(struct owl_dss_device *dssdev, u8 * buffer , int len)
 {
+	int r;
 	
-  int r = owldss_hdmi_display_get_cable_status(dssdev);
-  if(!r){
-         printk("owldss_hdmi_read_edid ~~~ error hdmi not connected \n");
-         return r;
-       }
-    r = read_edid(buffer,len);
-	if(r <= 0){
-		printk("owldss_hdmi_read_edid ~~~ error\n");
+	r = owldss_hdmi_display_get_cable_status(dssdev);
+	
+	if(!r) {
+         return r; // hdmi not connected
 	}
-	return r;
+	
+	return read_edid(buffer, len);
 }
+
 int owldss_hdmi_display_get_cable_status(struct owl_dss_device *dssdev)
 {
 	int r;
 	mutex_lock(&hdmi.lock);
 	r = hdmi.ip_data.ops->cable_check(&hdmi.ip_data);
-	//HDMI_DEBUG("ENTER owldss_hdmi_display_get_cable_status %d\n",r);
 	mutex_unlock(&hdmi.lock);
 	return r;
 }
 
 int owldss_hdmi_display_enable(struct owl_dss_device *dssdev)
 {
-
 	struct owl_overlay_manager *mgr = dssdev->manager;
 	int r = 0;
 
-	//DEBUG_ON("ENTER hdmi_display_enable\n");
-
 	mutex_lock(&hdmi.lock);
 
-    if (mgr == NULL) {
-		//DEBUG_ERR("failed to enable display: no manager\n");
+    if (mgr == NULL)
+    {
 		r = -ENODEV;
 		goto err0;
 	}
-	   
+	
     save_declk_and_switch_for_hdmi();
     
 	r = owl_dss_start_device(dssdev);
 	
 	if (r) {
-		//DEBUG_ERR("failed to start device\n");
 		goto err0;
 	}
-	//HDMI_DEBUG("owl_dss_start_device end\n");	
 	
 	r = hdmi_power_on_full(dssdev);
+	
 	if (r) {
-		//DEBUG_ERR("failed to power on device\n");
 		goto err1;
 	}	
 
 	if(hdmi_data.hdcp_onoff){
 		hdcp_init();
 
-		queue_delayed_work(hdmi.ip_data.hdcp.wq, &hdmi.ip_data.hdcp.hdcp_work,
-					msecs_to_jiffies(50));
-	}			
-	if(hdmi.ip_data.settings.hdmi_mode == HDMI_HDMI){
-		//switch_set_state(&hdev_audio, 1);
+		queue_delayed_work(hdmi.ip_data.hdcp.wq, &hdmi.ip_data.hdcp.hdcp_work, msecs_to_jiffies(50));
 	}
-	/*hdmi_dump_regs();*/
 	
 	mutex_unlock(&hdmi.lock);
 	return 0;
@@ -794,11 +785,12 @@ err0:
 
 int owldss_hdmi_hotplug_debug(struct owl_dss_device *dssdev,int enable)
 {
-	if(enable){
-		//DEBUG_ON("~~~~~~~~~~~~~hdmi plug in\n");					
+	if(enable)
+	{				
 		hdmi_send_uevent(1);
-	}else{
-		//DEBUG_ON("~~~~~~~~~~~~~hdmi plug out\n");
+	}
+	else
+	{
 		hdmi_send_uevent(0);
 	}
 	return 0;
@@ -806,47 +798,45 @@ int owldss_hdmi_hotplug_debug(struct owl_dss_device *dssdev,int enable)
 
 int owldss_hdmi_cable_debug(struct owl_dss_device *dssdev,int enable)
 {
-	if(enable){
+	if(enable)
+	{
 		hdmi.data.cable_check_onoff = 1;
-	}else{
+	}
+	else
+	{
 		hdmi.data.cable_check_onoff = 0;
 	}
-	//DEBUG_ON("~~~~~~~~~~~~~owldss_hdmi_cable_debug %d\n", hdmi.data.cable_check_onoff );
 	return 0;
 }
 
 int owldss_hdmi_uevent_debug(struct owl_dss_device *dssdev,int enable)
 {
-	if(enable){
+	if(enable)
+	{
 		hdmi.data.send_uevent = 1;
-	}else{
+	}
+	else
+	{
 		hdmi.data.send_uevent = 0;
-	}	
-	//DEBUG_ON("~~~~~~~~~~~~~owldss_hdmi_uevent_debug %d\n", hdmi.data.send_uevent );
+	}
 	return 0;
 }
 
 void owldss_hdmi_display_disable(struct owl_dss_device *dssdev)
 {
-	//DEBUG_ON("Enter hdmi_display_disable\n");
-
 	mutex_lock(&hdmi.lock);
 
 	hdmi_power_off_full(dssdev);
 
 	owl_dss_stop_device(dssdev);
 	
-	if(hdmi.ip_data.settings.hdmi_mode == HDMI_HDMI){
-		//switch_set_state(&hdev_audio, 2);
-	}
-
 	mutex_unlock(&hdmi.lock);
 }
 
 int owl_hdmi_get_effect_parameter(struct owl_dss_device *dssdev, enum owl_plane_effect_parameter parameter_id)
 {
-
-    switch(parameter_id){
+    switch(parameter_id)
+    {
     	case OWL_DSS_VIDEO_LIGHTNESS:
     		return hdmi_data.lightness;
     	case OWL_DSS_VIDEO_SATURATION:
@@ -881,60 +871,56 @@ void owl_hdmi_set_effect_parameter(struct owl_dss_device *dssdev,enum owl_plane_
 int owldss_hdmi_panel_init(struct owl_dss_device *dssdev)
 {	
 	int r;
-	//HDMI_DEBUG("owl_dss_device  hdmi  p->0x%p\n", dssdev);
 	hdmi_display_set_dssdev(dssdev);
-	hdmi_set_settings(&hdmi.ip_data);	
-	//HDMI_DEBUG("hpd_enable start\n");
+	hdmi_set_settings(&hdmi.ip_data);
 	
-	if(hdmi.hdmihw_diff->ic_type == IC_TYPE_ATM7059TC){		
+	if(hdmi.hdmihw_diff->ic_type == IC_TYPE_ATM7059TC)
+	{		
 		hdmi.ip_data.ops->hdmi_devclken(&hdmi.ip_data, 1);
 		hdmi.ip_data.ops->hdmi_reset(&hdmi.ip_data);
 	}
 	
 	owldss_hdmi_display_set_vid(dssdev,hdmi.ip_data.cfg.cm.vid);	
 	
-	
 	hdmi.ip_data.ops->hpd_enable(&hdmi.ip_data, 0);
 	
 	r = request_irq(OWL_IRQ_HDMI, hdmi_irq_handle, 0, "hdmidev", NULL);	
 	
 	if (r) {
-		DEBUG_ERR(" register irq failed!\n");
 		return r;
-	} else {
-		DEBUG_ON(" register irq ON!\n");
-	}		
+	}
+		
 	hdmi_cable_check_init();
 	return 0;
 }
 
 int owldss_hdmi_panel_suspend(struct owl_dss_device *dssdev)
 {
-	//DEBUG_ON("owldss_hdmi_panel_suspend \n");
 	hdmi.ip_data.ops->hpd_enable(&hdmi.ip_data, 0);
 	cancel_delayed_work_sync(&hdmi_cable_check_work);
 	cancel_delayed_work_sync(&hdmi.ip_data.hdcp.hdcp_work);
 	cancel_work_sync(&irq_work);
-	//flush_workqueue(hdmi.ip_data.hdcp.wq);
-	//flush_scheduled_work();
 	return 0;
 }
 
 int owldss_hdmi_panel_resume(struct owl_dss_device *dssdev)
 {
-
 	hdmi.ip_data.ops->hpd_enable(&hdmi.ip_data, hdmi.data.hpd_en);
 
-	queue_delayed_work(hdmi.ip_data.hdcp.wq, &hdmi_cable_check_work,
-				msecs_to_jiffies(2000));
+	queue_delayed_work(hdmi.ip_data.hdcp.wq, &hdmi_cable_check_work, msecs_to_jiffies(2000));
+	
 	return 0;
 }
 static u32 string_to_data_fmt(const char *name)
 {
 	int i;
-	for (i = 0; i < ARRAY_SIZE(date_fmts); i++) {
+	
+	for (i = 0; i < ARRAY_SIZE(date_fmts); i++)
+	{
 		if (!strcmp(date_fmts[i].name, name))
+		{
 			return date_fmts[i].data_fmt;
+		}
 	}
 
 	return -1;
@@ -942,110 +928,36 @@ static u32 string_to_data_fmt(const char *name)
 static int of_get_hdmi_data(struct platform_device *pdev, struct hdmi_property *hdmi_data)
 {
 	struct device_node *of_node;
-	char const *default_resulation;
-	char const *over_scan;
+	char const *default_resolution;
 	
-
-	//HDMI_DEBUG("%s\n", __func__);
-
 	of_node = pdev->dev.of_node;
 
-	if (of_property_read_u32_array(of_node, "hdcp_onoff", &hdmi_data->hdcp_onoff , 1)) {
-		hdmi_data->hdcp_onoff = 0;
-	}
-	if (of_property_read_u32_array(of_node, "channel_invert", &hdmi_data->channel_invert , 1)) {
-		hdmi_data->channel_invert = 0;
-	}
-	if (of_property_read_u32_array(of_node, "bit_invert", &hdmi_data->bit_invert , 1)) {
-		hdmi_data->bit_invert = 0;
+	hdmi_data->hdcp_onoff = 0;
+	hdmi_data->hotplugable = 1;
+	hdmi.data.hpd_en = hdmi_data->hotplugable;
+	hdmi_data->channel_invert = 0;
+	hdmi_data->bit_invert = 0;
+	
+	if (of_property_read_string(of_node, "default_resolution", &default_resolution)) {
+		default_resolution = NULL;
 	}
 	
-	if (of_property_read_u32_array(of_node, "hotplugable", &hdmi_data->hotplugable , 1)) {
-		hdmi_data->hotplugable = 1;		
-	}
-	hdmi.data.hpd_en = hdmi_data->hotplugable;			
+	user_config_vid = string_to_data_fmt(default_resolution);
 	
-	if (!of_property_read_string(of_node, "over_scan", &over_scan)) {		
-		if(over_scan != NULL)
-		{
-			printk("over_scan \n %s",over_scan);
-			sscanf(over_scan,"%d,%d",(int *)(&hdmi_data->overscan_width),(int *)(&hdmi_data->overscan_height));
-			printk("hdmi_data->overscan_width %d  ,hdmi_data->overscan_height %d \n",hdmi_data->overscan_width,hdmi_data->overscan_height);
-		}
-		
-	}
-	
-	if (of_property_read_string(of_node, "default_resolution", &default_resulation)) {
-		default_resulation = NULL;
-	}
-	
-	user_config_vid = string_to_data_fmt(default_resulation);
-	
-	if(boot_hdmi_vid == -1)
-	{
+	if(boot_hdmi_vid == -1) {
 		boot_hdmi_vid = user_config_vid;
 	}
 		
 	hdmi.ip_data.cfg.cm.vid = boot_hdmi_vid;
 	
-	if(hdmi.ip_data.cfg.cm.vid == -1){
-		
+	if(hdmi.ip_data.cfg.cm.vid == -1) {
 		hdmi.ip_data.cfg.cm.vid = OWL_TV_MOD_720P_60HZ;
-		
 	}
 	
-
-
-	if (of_property_read_u32_array(of_node, "lightness", &hdmi_data->lightness , 1)) {
-		hdmi_data->lightness = DEF_LIGHTNESS;
-		//DEBUG_ON("cat not get lightness  %d\n", hdmi_data->lightness);
-	}
-	if (of_property_read_u32_array(of_node, "saturation", &hdmi_data->saturation , 1)) {
-		hdmi_data->saturation = DEF_SATURATION;
-		//DEBUG_ON("cat not get saturation  %d\n", hdmi_data->saturation);
-	}
-	if (of_property_read_u32_array(of_node, "contrast", &hdmi_data->contrast , 1)) {
-		hdmi_data->contrast = DEF_CONTRAST;
-		//DEBUG_ON("cat not get contrast  %d\n", hdmi_data->contrast);
-	}
-	
+	hdmi_data->lightness = DEF_LIGHTNESS;
+	hdmi_data->saturation = DEF_SATURATION;
+	hdmi_data->contrast = DEF_CONTRAST;
 	hdmi.ip_data.txrx_cfg.drv_from_dts = 0;
-	
-	if (of_property_read_u32_array(of_node, "vid480p_tx1", &hdmi.ip_data.txrx_cfg.vid480p_tx1, 1)) {
-		//DEBUG_ERR("cat not get vid480p_tx1 \n");
-		goto read_err;
-	}
-	if (of_property_read_u32_array(of_node, "vid480p_tx2", &hdmi.ip_data.txrx_cfg.vid480p_tx2, 1)) {
-		//DEBUG_ERR("cat not get vid480p_tx2 \n");
-		goto read_err;
-	}
-	if (of_property_read_u32_array(of_node, "vid576p_tx1", &hdmi.ip_data.txrx_cfg.vid576p_tx1, 1)) {
-		//DEBUG_ERR("cat not get vid576p_tx1 \n");
-		goto read_err;
-	}	
-	if (of_property_read_u32_array(of_node, "vid576p_tx2", &hdmi.ip_data.txrx_cfg.vid576p_tx2, 1)) {
-		//DEBUG_ERR("cat not get vid576p_tx2 \n");
-		goto read_err;
-	}	
-	if (of_property_read_u32_array(of_node, "vid720p_tx1", &hdmi.ip_data.txrx_cfg.vid720p_tx1, 1)) {
-		//DEBUG_ERR("cat not get vid720p_tx1 \n");
-		goto read_err;
-	}	
-	if (of_property_read_u32_array(of_node, "vid720p_tx2", &hdmi.ip_data.txrx_cfg.vid720p_tx2, 1)) {
-		//DEBUG_ERR("cat not get vid720p_tx2 \n");
-		goto read_err;
-	}		
-	if (of_property_read_u32_array(of_node, "vid1080p_tx1", &hdmi.ip_data.txrx_cfg.vid1080p_tx1, 1)) {
-		//DEBUG_ERR("cat not get vid1080p_tx1 \n");
-		goto read_err;
-	}	
-	if (of_property_read_u32_array(of_node, "vid1080p_tx2", &hdmi.ip_data.txrx_cfg.vid1080p_tx2, 1)) {
-		//DEBUG_ERR("cat not get vid1080p_tx2 \n");
-		goto read_err;
-	}	
-
-	hdmi.ip_data.txrx_cfg.drv_from_dts = 1;
-read_err:
 	
 	return 0;
 }
@@ -1159,7 +1071,7 @@ static int platform_hdmihw_remove(struct platform_device *pdev)
 static s32 hdmi_diver_suspend(struct platform_device *pdev, pm_message_t mesg)
 {
 
-	DEBUG_ON("hdmi_diver_suspend \n");
+
 	hdmi.ip_data.ops->hpd_enable(&hdmi.ip_data, 0);
 
 	return 0;
@@ -1168,7 +1080,7 @@ static s32 hdmi_diver_suspend(struct platform_device *pdev, pm_message_t mesg)
 static s32 hdmi_diver_resume(struct platform_device *pdev)
 {
 
-	DEBUG_ON("hdmi_diver_resume \n");
+
 
 	hdmi.ip_data.ops->hdmi_reset(&hdmi.ip_data);
 	hdmi.ip_data.ops->hpd_enable(&hdmi.ip_data, hdmi.data.hpd_en);
@@ -1180,12 +1092,12 @@ static s32 hdmi_diver_resume(struct platform_device *pdev)
 #ifndef SUSPEND_IN_DSS
 static void hdmi_early_suspend(struct early_suspend *h)
 {
-	//DEBUG_ON("hdmi_early_suspend \n");
+
 	hdmi.ip_data.ops->hpd_enable(&hdmi.ip_data, 0);
 }
 static void hdmi_late_resume(struct early_suspend *h)
 {
-	//DEBUG_ON("hdmi_late_resume \n");
+
 
 	hdmi.ip_data.ops->hdmi_reset(&hdmi.ip_data);
 	hdmi.ip_data.ops->hpd_enable(&hdmi.ip_data, hdmi.data.hpd_en);
@@ -1207,7 +1119,7 @@ static struct platform_driver owldss_hdmihw_driver = {
 	.resume = hdmi_diver_resume,
 #endif
 	.driver         = {
-		.name   = "owl_hdmihw",
+		.name   = "caninos_hdmihw",
 		.owner  = THIS_MODULE,
 		.of_match_table = atm70xx_hdmi_of_match,
 	},
@@ -1243,7 +1155,6 @@ int owl_hdmi_uninit_platform(void)
 static int __init boot_hdmi_vid_setup(char *str)
 {
 	sscanf(str,"%d",&boot_hdmi_vid);
-	//printk("-------- boot_hdmi_vid_setup %d --------\n",boot_hdmi_vid);
 	return 1;
 }
 

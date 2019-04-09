@@ -11,15 +11,8 @@
 
 #define to_tvout_plat(d) (to_platform_device(d)->dev.platform_data)
 
-
 #ifndef hdmi_cec_dbg
-#ifdef CONFIG_TV_DEBUG
-#define hdmi_cec_dbg(fmt, ...)					\
-		printk(KERN_DEBUG "[%s] %s(): " fmt,		\
-			"HDMI-CEC", __func__, ##__VA_ARGS__)
-#else
 #define hdmi_cec_dbg(fmt, ...)
-#endif
 #endif
 
 enum s5p_tvout_endian {

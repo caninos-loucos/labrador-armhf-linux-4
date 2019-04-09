@@ -37,11 +37,8 @@ static int dss_initialize_debugfs(void)
 }
 static void dss_uninitialize_debugfs(void)
 {
+	return;
 }
-
-/*=================================================================
- *              display subsystem bus and its operations
- *===============================================================*/
 
 static void dss_bus_release(struct device *dev)
 {
@@ -117,7 +114,7 @@ static const struct attribute_group *dss_drv_attr_groups[] = {
 };
 
 static struct bus_type dss_bus_type = {
-	.name = "owldss",
+	.name = "caninos-dss",
 	.match = dss_bus_match,
 	.dev_groups = dss_dev_attr_groups,
 	.drv_groups = dss_drv_attr_groups,
@@ -135,7 +132,7 @@ static int owl_dss_bus_register(void)
 		return r;
 	}
 
-	dev_set_name(&dss_bus, "owldss");
+	dev_set_name(&dss_bus, "caninos-dss");
 	r = device_register(&dss_bus);
 	if (r) {
 		DSSERR("bus driver register failed\n");
@@ -217,10 +214,14 @@ int owl_dss_register_driver(struct owl_dss_driver *dssdriver)
 	dssdriver->driver.remove = dss_driver_remove;
 
 	if (dssdriver->get_resolution == NULL)
+	{
 		dssdriver->get_resolution = owl_default_get_resolution;
+	}
+		
 	if (dssdriver->get_recommended_bpp == NULL)
-		dssdriver->get_recommended_bpp =
-			owl_default_get_recommended_bpp;
+	{
+		dssdriver->get_recommended_bpp = owl_default_get_recommended_bpp;
+	}
 
 	return driver_register(&dssdriver->driver);
 }
@@ -384,8 +385,6 @@ static int owl_dss_remove(struct platform_device *pdev)
 
 atomic_t devices_suspended_from_early_suspend = ATOMIC_INIT(false);
 
-
-
 #ifdef CONFIG_PM
 static int owl_dss_suspend(struct platform_device *pdev, pm_message_t state)
 {
@@ -433,39 +432,38 @@ static int owl_dss_resume(struct platform_device *pdev)
 
 static void owl_dss_shutdown(struct platform_device *pdev)
 {
-	DSSDBG("shutdown\n");
 	dss_disable_all_devices();
 }
 
 static struct owl_dss_device asoc_lcd_device = {
 	.name			= "lcd",
-	.driver_name		= "generic_lcdc_panel",
+	.driver_name	= "generic_lcdc_panel",
 	.type			= OWL_DISPLAY_TYPE_LCD,
 	.data_lines	= 24,
 };
 static struct owl_dss_device asoc_edp_device = {
 	.name			= "edp",
-	.driver_name		= "generic_edp_panel",
+	.driver_name	= "generic_edp_panel",
 	.type			= OWL_DISPLAY_TYPE_EDP,
 	.data_lines	= 24,
 };
 
 static struct owl_dss_device asoc_dsi_device = {
 	.name			= "dsi",
-	.driver_name		= "generic_dsi_panel",
+	.driver_name	= "generic_dsi_panel",
 	.type			= OWL_DISPLAY_TYPE_DSI,
 	.data_lines	= 24,
 };
 static struct owl_dss_device asoc_hdmi_device = {
 	.name			= "hdmi",
-	.driver_name		= "hdmi_panel",
+	.driver_name	= "hdmi_panel",
 	.type			= OWL_DISPLAY_TYPE_HDMI,
 	.data_lines	= 16,
 };
 
 static struct owl_dss_device asoc_cvbs_device = {
 	.name			= "cvbs",
-	.driver_name		= "cvbs_panel",
+	.driver_name	= "cvbs_panel",
 	.type			= OWL_DISPLAY_TYPE_CVBS,
 	.data_lines	= 16,
 };
@@ -484,45 +482,47 @@ static struct owl_dss_board_info owl_dss_data = {
 };
 
 static struct platform_device owl_dss_device = {
-	.name          = "owldss",
-	.id            = -1,
-	.dev            = {
+	.name = "caninos-dss",
+	.id   = -1,
+	.dev  = {
 		.platform_data = &owl_dss_data,
 	},
 };
 
 static struct platform_driver owl_dss_driver = {
-	.remove         = owl_dss_remove,
-	.shutdown	= owl_dss_shutdown,
-	.suspend	= owl_dss_suspend,
-	.resume		= owl_dss_resume,
-	.driver         = {
-		.name   = "owldss",
+	.remove = owl_dss_remove,
+	.shutdown = owl_dss_shutdown,
+	.suspend = owl_dss_suspend,
+	.resume	= owl_dss_resume,
+	
+	.driver = {
+		.name   = "caninos-dss",
 		.owner  = THIS_MODULE,
 	},
 };
 
-
-/*=================================================================
- *       the entry and exit of display subsystem
- *===============================================================*/
 static int __init owl_dss_init(void)
 {
 	int r;
 
 	r = owl_dss_bus_register();
-	if (r)
+	
+	if (r) {
 		return r;
+	}
 	
 	r = platform_device_register(&owl_dss_device);
 	
-	if (r) {
+	if (r) 
+	{
 		owl_dss_bus_unregister();
 		return r;
 	}	
 
 	r = platform_driver_probe(&owl_dss_driver, owl_dss_probe);
-	if (r) {
+	
+	if (r) 
+	{
 		owl_dss_bus_unregister();
 		platform_device_unregister(&owl_dss_device);
 		return r;
@@ -533,7 +533,6 @@ static int __init owl_dss_init(void)
 
 static void owl_dss_exit(void)
 {
-	
 	platform_driver_unregister(&owl_dss_driver);
 	
 	platform_device_unregister(&owl_dss_device);
@@ -545,5 +544,4 @@ static void owl_dss_exit(void)
 
 module_init(owl_dss_init);
 module_exit(owl_dss_exit);
-
 

@@ -1,23 +1,4 @@
-/*
- * hdmi_sysfs.c
- *
- * HDMI OWL IP driver Library
- *
- * Copyright (C) 2014 Actions Corporation
- * Author: Guo Long  <guolong@actions-semi.com>
- *
- * This program is free software; you can redistribute it and/or modify it
- * under the terms of the GNU General Public License version 2 as published by
- * the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
- * more details.
- *
- * You should have received a copy of the GNU General Public License along with
- * this program.  If not, see <http://www.gnu.org/licenses/>.
- */
+
 #include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/err.h>
@@ -108,7 +89,6 @@ static ssize_t show_hdmi_plug(struct device *dev,
 {
 	return snprintf(buf, PAGE_SIZE, "%d\n", hdmi.data.hdmi_sta);
 }
-
 
 static ssize_t show_TX_AMP(struct device *dev,
 		struct device_attribute *attr, char *buf)
@@ -277,6 +257,7 @@ static ssize_t store_EMP_EN(struct device *dev,
 	r = kstrtoint(buf, 0, &val);
 	if (r)
 		return r;
+	
   tmp=readl(hdmi.ip_data.base+HDMI_TX_1);
 
 	tmp= ((tmp&0xffffffbf)|(val<<6)); 
@@ -284,8 +265,6 @@ static ssize_t store_EMP_EN(struct device *dev,
 	writel(tmp,hdmi.ip_data.base+HDMI_TX_1);
 	return r ? r : count;
 }
-
-
 
 static ssize_t show_EMP_SET(struct device *dev,
 		struct device_attribute *attr, char *buf)
@@ -353,7 +332,8 @@ static ssize_t show_edid_ok(struct device *dev, struct device_attribute *attr, c
 static ssize_t show_edid_buf(struct device *dev, struct device_attribute *attr, char *buf)
 {
 	int i;
-	for(i=0; i< 512; i++){
+	for(i=0; i< 512; i++)
+	{
 		DEBUG_ON("EDID_Buf[0x%x]=0x%x\n", i, hdmi.edid.EDID_Buf[i]);	
 	}
 	return 0;

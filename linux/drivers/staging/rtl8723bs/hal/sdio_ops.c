@@ -948,7 +948,9 @@ static struct recv_buf *sd_recv_rxfifo(struct adapter *adapter, u32 size)
 	
 	if (!recvbuf)
 	{
-		DBG_871X_LEVEL(_drv_err_, "%s: alloc recvbuf FAIL!\n", __func__);
+		/* Caninos Patch Start */
+		//DBG_871X_LEVEL(_drv_err_, "%s: alloc recvbuf FAIL!\n", __func__);
+		/* Caninos Patch End */
 		return NULL;
 	}
 

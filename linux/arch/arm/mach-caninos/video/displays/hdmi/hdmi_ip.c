@@ -16,13 +16,11 @@
 
 static inline void hdmi_write_reg(struct hdmi_ip_data *ip_data,	const u16 idx, u32 val)
 {
-	//HDMI_DEBUG("write base=%x  offset=%x  val=%x\n", ip_data->base, idx, val);
 	writel(val, ip_data->base + idx);
 }
 
 static inline u32 hdmi_read_reg(struct hdmi_ip_data *ip_data,const u16 idx)
 {
-	//HDMI_DEBUG("read base=%x  offset=%x \n", ip_data->base, idx);
 	return readl(ip_data->base + idx);
 }
 
@@ -130,7 +128,7 @@ static void hdmi_core_config_input_src(struct hdmi_ip_data *ip_data)
 static void hdmi_video_init_format(struct hdmi_video_format *video_fmt,
 	struct owl_video_timings *timings, struct hdmi_config *param)
 {
-	HDMI_DEBUG("Enter hdmi_video_init_format\n");
+
 	video_fmt->packing_mode = HDMI_PACK_24b_RGB_YUV444_YUV422;
 	video_fmt->y_res = param->timings.y_res;
 	video_fmt->x_res = param->timings.x_res;
@@ -158,8 +156,7 @@ static void hdmi_video_config_format(struct hdmi_ip_data *ip_data,
 	u32 val = 0;
 	u32 val_hp = timings->x_res + timings->hbp + timings->hfp + timings->hsw;
 	u32 val_vp = timings->y_res + timings->vbp + timings->vfp + timings->vsw;
-	HDMI_DEBUG("x %d %d %d %d\n", timings->x_res, timings->hbp, timings->hfp, timings->hsw);
-	HDMI_DEBUG("x %d %d %d %d\n", timings->y_res, timings->vbp, timings->vfp, timings->vsw);
+
 
 	val = hdmi_read_reg(ip_data, HDMI_VICTL);
 	val = REG_SET_VAL(val ,val_hp-1, hdmi.hdmihw_diff->hp_end, hdmi.hdmihw_diff->hp_start);
@@ -168,17 +165,16 @@ static void hdmi_video_config_format(struct hdmi_ip_data *ip_data,
 	}else{
 		val = REG_SET_VAL(val ,val_vp * 2, hdmi.hdmihw_diff->vp_end, hdmi.hdmihw_diff->vp_start);
 	}
-
-	HDMI_DEBUG("hdmi_video_config_format val = %x hp = %x vp=%x\n", val, val_hp, val_vp);	
+	
 	hdmi_write_reg(ip_data, HDMI_VICTL, val);
 }
 
 static void hdmi_video_config_interface(struct hdmi_ip_data *ip_data, struct owl_video_timings *timings)
 {
-
 	u32 val;
-	HDMI_DEBUG("hdmi_video_config_interface timings->interlace %x\n", timings->interlace);
-	if(timings->interlace == 0){	
+	
+	if(timings->interlace == 0)
+	{	
 		val = 0;
 		hdmi_write_reg(ip_data, HDMI_VIVSYNC, val);
 		
@@ -194,15 +190,11 @@ static void hdmi_video_config_interface(struct hdmi_ip_data *ip_data, struct owl
 		}
 		hdmi_write_reg(ip_data, HDMI_VIVHSYNC, val);
 		
-		HDMI_DEBUG("hdmi_video_config_interface HDMI_VIVHSYNC %x\n", val);
-		
 		//VIALSEOF = (y_res + vbp + vsp - 1)  |  ((vbp + vfp - 1) << 12)
 		val = hdmi_read_reg(ip_data, HDMI_VIALSEOF);
 		val = REG_SET_VAL(val ,timings->vstart -1 + timings->vsw + timings->vbp + timings->y_res - 1, 23, 12);
 		val = REG_SET_VAL(val ,timings->vstart -1 + timings->vsw + timings->vbp - 1, 10, 0);
 		hdmi_write_reg(ip_data, HDMI_VIALSEOF, val);
-		
-		HDMI_DEBUG("hdmi_video_config_interface HDMI_VIALSEOF %x\n", val);
 		
 	    val = 0;
 		hdmi_write_reg(ip_data, HDMI_VIALSEEF, val);
@@ -212,8 +204,9 @@ static void hdmi_video_config_interface(struct hdmi_ip_data *ip_data, struct owl
 		val = REG_SET_VAL(val ,timings->hbp +  timings->hsw - 1, 11, 0);
 		val = REG_SET_VAL(val ,timings->x_res + timings->hbp + timings->hsw - 1, 28, 16);
 		hdmi_write_reg(ip_data, HDMI_VIADLSE, val);
-		HDMI_DEBUG("hdmi_video_config_interface HDMI_VIADLSE %x\n", val);
-	}else{
+	}
+	else
+	{
 		val = 0;
 		hdmi_write_reg(ip_data, HDMI_VIVSYNC, val);
 		
@@ -223,14 +216,12 @@ static void hdmi_video_config_interface(struct hdmi_ip_data *ip_data, struct owl
 		val = REG_SET_VAL(val ,(timings->y_res + timings->vbp + timings->vfp + timings->vsw) * 2, 22, 12);
 		val = REG_SET_VAL(val ,timings->vfp * 2, 22, 12);
 		hdmi_write_reg(ip_data, HDMI_VIVHSYNC, val);
-		HDMI_DEBUG("hdmi_video_config_interface HDMI_VIVHSYNC %x\n", val);
 		
 		//VIALSEOF = (y_res + vbp + vfp - 1)  |  ((vbp + vfp - 1) << 12)
 		val = hdmi_read_reg(ip_data, HDMI_VIALSEOF);
 		val = REG_SET_VAL(val ,timings->vbp + timings->vfp  - 1, 22, 12);
 		val = REG_SET_VAL(val ,(timings->y_res + timings->vbp + timings->vfp)*2, 10, 0);
 		hdmi_write_reg(ip_data, HDMI_VIALSEOF, val);
-		HDMI_DEBUG("hdmi_video_config_interface HDMI_VIALSEOF %x\n", val);
 		
 	    val = 0;
 		hdmi_write_reg(ip_data, HDMI_VIALSEEF, val);
@@ -240,15 +231,13 @@ static void hdmi_video_config_interface(struct hdmi_ip_data *ip_data, struct owl
 		val = REG_SET_VAL(val ,timings->hbp +  timings->hsw - 1, 27, 16);
 		val = REG_SET_VAL(val ,timings->x_res + timings->hbp + timings->hsw - 1, 11, 0);
 		hdmi_write_reg(ip_data, HDMI_VIADLSE, val);
-		HDMI_DEBUG("hdmi_video_config_interface HDMI_VIADLSE %x\n", val);
 	}
-
 }
 
 static void hdmi_video_interval_packet(struct hdmi_ip_data *ip_data, struct owl_video_timings *timings)
 {
 	u32 val;
-	HDMI_DEBUG("hdmi_video_interval_packet\n");
+
 	switch (ip_data->cfg.cm.code)
 	{
 		case VID640x480P_60_4VS3:
@@ -314,9 +303,6 @@ static void ip_hdmi_clk24Men(struct hdmi_ip_data *ip_data, bool enable)
 
 static void ip_hdmi_reset(struct hdmi_ip_data *ip_data)
 {
-	HDMI_DEBUG("[%s start]\n", __func__);
-
-	HDMI_DEBUG("~~~~~module_reset \n");
 	module_reset(MOD_ID_HDMI);
 /*	
 	val = hdmi_read_reg(ip_data, HDMI_TX_1);
@@ -383,7 +369,7 @@ static int ip_hdmi_pll_enable(struct hdmi_ip_data *ip_data)
 	u32 pix_rate = 0;
 	int ret;
 	struct clk *tvout_clk = NULL;
-	HDMI_DEBUG("PLL locked!\n");
+
 	switch (ip_data->cfg.cm.code)
 	{
 		case VID640x480P_60_4VS3:
@@ -408,10 +394,12 @@ static int ip_hdmi_pll_enable(struct hdmi_ip_data *ip_data)
 	
 	tvout_clk = clk_get(NULL, CLKNAME_TVOUTPLL);
 	ret = clk_set_rate(tvout_clk, pix_rate);
+	
 	if (ret < 0) {
 		DEBUG_ERR("pixel rate set error!\n");
 		return ret;
-	}		
+	}	
+		
 	msleep(5);
 	clk_prepare(tvout_clk);
 	clk_enable(tvout_clk);
@@ -445,9 +433,7 @@ static bool ip_hdmi_cable_check_state(struct hdmi_ip_data *ip_data)
 {
 	bool hpd;
 	
-	/*HDMI_DEBUG("hdmi_read_reg(ip_data, HDMI_CR)=%x\n",hdmi_read_reg(ip_data, HDMI_CR));*/
-	
-	/*hpd = (hdmi_read_reg(ip_data, HDMI_CR)&(1<<29)?1:0);*/
+
 	
 	if((hdmi_read_reg(ip_data, HDMI_CR)&(1<<29))&&(hdmi_read_reg(ip_data, CEC_DDC_HPD)&(3<<12))){
 		if((hdmi_read_reg(ip_data, CEC_DDC_HPD)&(3<<8))||

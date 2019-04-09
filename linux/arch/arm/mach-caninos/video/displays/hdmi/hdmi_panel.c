@@ -13,55 +13,42 @@
 static struct {
 	/* This protects the panel ops, mainly when accessing the HDMI IP. */
 	struct mutex lock;
-
 } hdmi_panel;
 
 static int hdmi_panel_probe(struct owl_dss_device *dssdev)
 {
 	/* Initialize default timings to VGA in DVI mode */
 	
-	HDMI_DEBUG("ENTER hdmi_panel_probe\n");
 	//owldss_hdmi_display_set_vid(dssdev, &dssdev->timings, 1);
-	HDMI_DEBUG("hdmi_panel_probe x_res= %d y_res = %d\n",
-		dssdev->timings.x_res,
-		dssdev->timings.y_res);
-
+	
 	return owldss_hdmi_panel_init(dssdev);
 }
 
 static void hdmi_panel_remove(struct owl_dss_device *dssdev)
 {
-
+	return;
 }
 
 static int hdmi_panel_suspend(struct owl_dss_device *dssdev)
 {
-	HDMI_DEBUG("ENTER hdmi_panel_suspend\n");
 	mutex_lock(&hdmi_panel.lock);
-	
 	owldss_hdmi_panel_suspend(dssdev);
-
 	mutex_unlock(&hdmi_panel.lock);
-	
 	return 0;
 }
 
 static int hdmi_panel_resume(struct owl_dss_device *dssdev)
 {
-	HDMI_DEBUG("ENTER hdmi_panel_resume\n");
 	mutex_lock(&hdmi_panel.lock);
-
 	owldss_hdmi_panel_resume(dssdev);
-	
 	mutex_unlock(&hdmi_panel.lock);
-	
 	return 0;
 }
 
 static int hdmi_panel_enable(struct owl_dss_device *dssdev)
 {
 	int r = 0;
-	HDMI_DEBUG("ENTER hdmi_panel_enable\n");
+	
 	mutex_lock(&hdmi_panel.lock);
 
 	if (dssdev->state == OWL_DSS_DISPLAY_ACTIVE) {
@@ -72,11 +59,13 @@ static int hdmi_panel_enable(struct owl_dss_device *dssdev)
 //	owldss_hdmi_display_set_timing(dssdev, &dssdev->timings);
 
 	r = owldss_hdmi_display_enable(dssdev);
-	if (r) {
+	
+	if (r)
+	{
 		DEBUG_ERR("failed to power on\n");
 		goto err;
 	}
-
+	
 	dssdev->state = OWL_DSS_DISPLAY_ACTIVE;
 
 err:
@@ -110,12 +99,8 @@ static void hdmi_get_timings(struct owl_dss_device *dssdev,
 static void hdmi_set_timings(struct owl_dss_device *dssdev,
 			struct owl_video_timings *timings)
 {
-	HDMI_DEBUG("hdmi_set_timings\n");
-
 	mutex_lock(&hdmi_panel.lock);
-
 	owldss_hdmi_display_set_timing(dssdev, timings);
-
 	mutex_unlock(&hdmi_panel.lock);
 }
 
@@ -124,128 +109,78 @@ static int hdmi_check_timings(struct owl_dss_device *dssdev,
 {
 	int r = 0;
 
-	HDMI_DEBUG("hdmi_check_timings\n");
-
 	mutex_lock(&hdmi_panel.lock);
-
 	r = owldss_hdmi_display_check_timing(dssdev, timings);
-
 	mutex_unlock(&hdmi_panel.lock);
 	return r;
 }
 
-static void hdmi_set_vid(struct owl_dss_device *dssdev,
-			int vid)
+static void hdmi_set_vid(struct owl_dss_device *dssdev, int vid)
 {
-	HDMI_DEBUG("hdmi_set_vid\n");
-
 	mutex_lock(&hdmi_panel.lock);
-
 	owldss_hdmi_display_set_vid(dssdev, vid);
-	
 	mutex_unlock(&hdmi_panel.lock);
 }
 
-static void hdmi_get_vid(struct owl_dss_device *dssdev,
-			int *vid)
+static void hdmi_get_vid(struct owl_dss_device *dssdev, int *vid)
 {
-	HDMI_DEBUG("hdmi_get_vid\n");
-
 	mutex_lock(&hdmi_panel.lock);
-	
 	owldss_hdmi_display_get_vid(dssdev, vid);
-	
 	mutex_unlock(&hdmi_panel.lock);
 }
 
-static void hdmi_enable_hpd(struct owl_dss_device *dssdev,
-			bool enable)
+static void hdmi_enable_hpd(struct owl_dss_device *dssdev, bool enable)
 {
-	HDMI_DEBUG("hdmi_enable_hpd\n");
-
 	mutex_lock(&hdmi_panel.lock);
-	
 	owldss_hdmi_display_enable_hotplug(dssdev, enable);
-	
 	mutex_unlock(&hdmi_panel.lock);
 }
 
-static void hdmi_enable_hdcp(struct owl_dss_device *dssdev,
-			bool enable)
+static void hdmi_enable_hdcp(struct owl_dss_device *dssdev, bool enable)
 {
-	HDMI_DEBUG("hdmi_enable_hdcp\n");
-
 	mutex_lock(&hdmi_panel.lock);
-	
 	owldss_hdmi_display_enable_hdcp(dssdev, enable);
-	
 	mutex_unlock(&hdmi_panel.lock);
 }
 
 static void hdmi_get_over_scan(struct owl_dss_device *dssdev, u16 * over_scan_width,u16 * over_scan_height)
 {
-	HDMI_DEBUG("hdmi_get_over_scan\n");
-
 	mutex_lock(&hdmi_panel.lock);
-	
 	owldss_hdmi_display_get_overscan(dssdev, over_scan_width,over_scan_height);
-	
 	mutex_unlock(&hdmi_panel.lock);
 }
 
 static void hdmi_set_over_scan(struct owl_dss_device *dssdev,u16 over_scan_width,u16 over_scan_height)
 {
-	HDMI_DEBUG("hdmi_set_over_scan\n");
-
 	mutex_lock(&hdmi_panel.lock);
-	
 	owldss_hdmi_display_set_overscan(dssdev, over_scan_width,over_scan_height);
-	
 	mutex_unlock(&hdmi_panel.lock);
 }
 
-static int hdmi_get_vid_cap(struct owl_dss_device *dssdev,
-			int *vid_cap)
+static int hdmi_get_vid_cap(struct owl_dss_device *dssdev, int *vid_cap)
 {
 	int r;
-	
-	HDMI_DEBUG("hdmi_get_vid_cap\n");
-
 	mutex_lock(&hdmi_panel.lock);
-	
 	r = owldss_hdmi_display_get_vid_cap(dssdev, vid_cap);
-	
 	mutex_unlock(&hdmi_panel.lock);
-	
 	return r;
 }
 
 static int hdmi_read_edid(struct owl_dss_device *dssdev,u8 *buf, int len)
 {
 	int r;
-	
-	HDMI_DEBUG("hdmi_read_edid\n");
-
 	mutex_lock(&hdmi_panel.lock);
-	
 	r = owldss_hdmi_read_edid(dssdev, buf, len);
-	
 	mutex_unlock(&hdmi_panel.lock);
-	
 	return r;
 }
 
 static int hdmi_get_cable_status(struct owl_dss_device *dssdev)
 {
 	int r;
-	HDMI_DEBUG("hdmi_get_cable_status\n");
-
 	mutex_lock(&hdmi_panel.lock);
-	
 	r = owldss_hdmi_display_get_cable_status(dssdev);
-	
 	mutex_unlock(&hdmi_panel.lock);
-	
 	return r;
 }
 
@@ -282,6 +217,7 @@ static struct owl_dss_driver hdmi_driver = {
 	.get_over_scan = hdmi_get_over_scan,
 	.set_over_scan = hdmi_set_over_scan,
 	.read_edid        = hdmi_read_edid,
+	
 	.driver			= {
 		.name   = "hdmi_panel",
 		.owner  = THIS_MODULE,
@@ -290,31 +226,25 @@ static struct owl_dss_driver hdmi_driver = {
 
 int __init hdmi_panel_init(void)
 {
-   
-   
    int r = -1; 
 
 	mutex_init(&hdmi_panel.lock);
 	
 	r = owl_hdmi_init_platform();
 	
-	if(r)
-	{
+	if(r) {
 		return r;
 	}
+	
 	return owl_dss_register_driver(&hdmi_driver);
-
 }
 
 void __exit hdmi_panel_exit(void)
 {
-	
 	owl_hdmi_uninit_platform();
-	
 	owl_dss_unregister_driver(&hdmi_driver);
-
 }
 
 module_init(hdmi_panel_init);
 module_exit(hdmi_panel_exit);
-MODULE_LICENSE("GPL");
+

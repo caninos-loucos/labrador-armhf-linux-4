@@ -1,25 +1,4 @@
-/*
- * linux/drivers/video/fbdev/owl/owlfb-main.c
- *
- * Copyright (C) 2014 Actions Corporation
- * Author: Hui Wang  <wanghui@actions-semi.com>
- *
- * Some code and ideas taken from drivers/video/fbdev/owl/ driver
- * by leopard.
- *
- * This program is free software; you can redistribute it and/or modify it
- * under the terms of the GNU General Public License version 2 as published by
- * the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
- * more details.
- *
- * You should have received a copy of the GNU General Public License along with
- * this program.  If not, see <http://www.gnu.org/licenses/>.
- */
- 
+
 #include <linux/device.h>
 #include <linux/kernel.h>
 #include <linux/kthread.h>

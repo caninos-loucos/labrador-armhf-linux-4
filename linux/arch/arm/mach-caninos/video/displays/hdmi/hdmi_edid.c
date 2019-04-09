@@ -66,8 +66,7 @@ static int hdmi_iic_probe(struct i2c_client *client,
         const struct i2c_device_id *id)
 {
     int err = 0;
-	
-	EDID_DEBUG("ok iic~~~~~~~\n");
+    
 	edid_devp->client = client;
 	return err;
 }
@@ -90,39 +89,44 @@ static struct i2c_driver hdmi_iic_driver = {
 
 static int i2c_check_adapter(void)
 {
-	EDID_DEBUG("i2c_check_adapter iic~~~~~~~\n");
-	if((edid_devp)&&(edid_devp->client)){
-		EDID_DEBUG("i2c_check_adapter OK!\n");
+	if((edid_devp)&&(edid_devp->client))
+	{
 		return 0;	
-	}else{
-		DEBUG_ERR("i2c_check_adapter edid_devp->client = NULL!\n");
+	}
+	else
+	{
 		return -EFAULT;
 	}
 }
 
 int ddc_init(void)
 {	
-	EDID_DEBUG("[%s start]  \n", __func__);
-	EDID_DEBUG("gll i2c_add_driver~~~\n");
+
 #ifdef IIC_FROM_DTS
 	edid_devp = kzalloc(sizeof(struct edid_dev),GFP_KERNEL);  
+	
 	if(i2c_add_driver(&hdmi_iic_driver))
 	{
-		DEBUG_ERR("i2c_add_driver hdmi_iic_driver error!!!\n");
+		//DEBUG_ERR("i2c_add_driver hdmi_iic_driver error!!!\n");
 		goto err;
 	}
 #else	
-		struct i2c_adapter *i2c_adap;  
-		edid_devp = kzalloc(sizeof(struct edid_dev),GFP_KERNEL);         	        
-		i2c_adap = i2c_get_adapter(3);  
-		if (!i2c_adap) {
-			DEBUG_ERR("hdmi  adapter error!\n");
-			goto err;
-		}
+	struct i2c_adapter *i2c_adap; 
 	 
-		edid_devp->client = i2c_new_device(i2c_adap, &i2c_hdmi_devices);  
-		i2c_put_adapter(i2c_adap); 
-#endif 
+	edid_devp = kzalloc(sizeof(struct edid_dev),GFP_KERNEL);  
+	       	        
+	i2c_adap = i2c_get_adapter(3);
+	
+	if (!i2c_adap)
+	{
+		//DEBUG_ERR("hdmi  adapter error!\n");
+		goto err;
+	}
+	 
+	edid_devp->client = i2c_new_device(i2c_adap, &i2c_hdmi_devices);  
+	i2c_put_adapter(i2c_adap); 
+#endif
+
 	return 0;
 err:
 	kfree(edid_devp);
@@ -139,7 +143,7 @@ static int ddc_read(char segment_index, char segment_offset, char * pbuf)
 	struct i2c_adapter *adap;
 	struct i2c_client *client;
 	
-	EDID_DEBUG("[%s start]\n",__func__);
+	
 	
 	set_hdmi_i2c_flag(1);
 
@@ -169,12 +173,12 @@ RETRY:
 
 	if (ret != 3) {
 		
-		DEBUG_ERR("[in %s]fail to read EDID ret %d \n",__func__,ret);
+		//DEBUG_ERR("[in %s]fail to read EDID ret %d \n",__func__,ret);
 		ret = -1;
 		goto RETURN1;
 		
 	} 
-	EDID_DEBUG("[%s finished]\n",__func__);
+
 
 RETURN1:
 	if ((ret < 0) && (retry_num < 3)) {
@@ -200,7 +204,7 @@ static int get_edid_data(u8 block,u8 *buf)
   
 	if(ddc_read(block>>1,offset,pbuf)<0)
 	{
-		DEBUG_ERR("read edid error!!!\n");
+		//DEBUG_ERR("read edid error!!!\n");
 		return -1;
 	}
 //	edid_test(offset, pbuf);
@@ -483,13 +487,13 @@ int read_edid(u8 * edid , int len)
 		
 	if(i2c_check_adapter())
 	{
-		DEBUG_ERR("iic adapter error!!!\n");
+		//DEBUG_ERR("iic adapter error!!!\n");
 		return -1;		
 	}
 	
 	if(ddc_read(0,0,edid)<0)
 	{
-		DEBUG_ERR("read edid error!!!\n");
+		//DEBUG_ERR("read edid error!!!\n");
 		return -1;
 	}
 	
@@ -526,31 +530,31 @@ int parse_edid(struct hdmi_edid *edid)
 
 	if(i2c_check_adapter())
 	{
-		DEBUG_ERR("iic adapter error!!!\n");
+		//DEBUG_ERR("iic adapter error!!!\n");
 		goto err0;		
 	}
 	
     if( get_edid_data(0, edid->EDID_Buf) != 0)
 	{
-		DEBUG_ERR("get_edid_data error!!!\n");
+		//DEBUG_ERR("get_edid_data error!!!\n");
 		goto err0;
 	}
 
 	if( edid_checksum(0, edid->EDID_Buf) != 0)
 	{
-		DEBUG_ERR("edid_checksum error!!!\n");
+		//DEBUG_ERR("edid_checksum error!!!\n");
 		goto err0;
 	}
 
 	if( edid_header_check(edid->EDID_Buf)!= 0)
 	{
-		DEBUG_ERR("edid_header_check error!!!\n");
+		//DEBUG_ERR("edid_header_check error!!!\n");
 		goto err0;
 	}
 
 	if( edid_version_check(edid->EDID_Buf)!= 0)
 	{
-		DEBUG_ERR("edid_version_check error!!!\n");
+		//DEBUG_ERR("edid_version_check error!!!\n");
 		goto err0;
 	}
 	
@@ -666,7 +670,7 @@ err0:
 	edid->video_formats[1] = 0;
 	edid->video_formats[2] = 0;
 	edid->video_formats[3] = 0;
-	DEBUG_ERR("read edid err0\n");
+	//DEBUG_ERR("read edid err0\n");
 	return -1 ;
 }
 
@@ -725,7 +729,6 @@ int i2c_hdcp_read(char *buf, unsigned short offset, int count)
      */
 	set_hdmi_i2c_flag(0);
     return (ret == 2) ? count : ret;
-
 }
 
 

@@ -1,13 +1,4 @@
-/*
- * asoc_hdmi_packet.c
- *
- * Copyright (C) 2011 Actions Semiconductor, Inc
- * Author:  Geng A-nan <genganan@actions-semi.com >
- * Data: Monday August 22, 2008
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- */
+
 #include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/err.h>
@@ -22,6 +13,7 @@
 #include "hdmi.h"
 #include "../../dss/dss_features.h"
 #include "../../dss/dss.h"
+
 /* Internal SRAM allocation for Periodic Data Island Packet */
 
 #define HDMI_RAMPKT_AVI_SLOT    0
@@ -30,9 +22,7 @@
 #define HDMI_RAMPKT_GBD_SLOT    3
 #define HDMI_RAMPKT_VS_SLOT     4
 #define HDMI_RAMPKT_MPEG_SLOT   5
-
 #define HDMI_RAMPKT_PERIOD      1
-
 
 #define owl_hdmi_write(a, b)  hdmi.ip_data.ops->write_reg(&hdmi.ip_data, a, b)
 #define owl_hdmi_read(a)      hdmi.ip_data.ops->read_reg(&hdmi.ip_data, a)
@@ -41,7 +31,6 @@
 
 int hdmi_EnableWriteRamPacket(void)
 {
-    
     int i;  
     unsigned int tmp_reg_value;
  

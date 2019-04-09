@@ -178,7 +178,7 @@ static irqreturn_t de_irq_handler(int irq, void *dev)
 	
 	irqstatus = de_ops->irq_status_get();
 	
-	//printk("de_irq_handler irqstatus 0x%x \n",irqstatus);
+
 
 	spin_lock(&de_pdata->irq_lock);
 
@@ -258,7 +258,7 @@ static int de_irq_init(void)
 
 	de_set_irqs();
 
-	DSSINFO("de irq init ok\n");
+
 	spin_unlock_irqrestore(&de_pdata->irq_lock, flags);
 
 	return 0;
@@ -411,8 +411,10 @@ void dehw_mgr_wait_for_go(enum owl_de_path_id path_id)
 	    
 	    while(schedule_hrtimeout(&expires, HRTIMER_MODE_ABS) != 0);
 	    
-    }while(val); 
+    }while(val);
+     
     end = ktime_get();
+    
     if(ktime_to_ns(end) - ktime_to_ns(being) > 10000000){
     	//printk("dehw_mgr_wait_for_go ~~ %lld (ns)\n",(ktime_to_ns(end) - ktime_to_ns(being)));   
 	}
@@ -422,7 +424,7 @@ void dehw_mgr_wait_for_go(enum owl_de_path_id path_id)
 int de_wait_for_irq_interruptible_timeout(enum de_irq_type irq,enum owl_de_path_id path_id, unsigned long timeout)
 {
 	int r;
-	//DSSINFO("de_wait_for_irq_interruptible_timeout path_id %d  irq 0x%x  irq status 0x%x\n",path_id,irq,de_ops->irq_status_get());	
+
 	r = owl_de_register_isr(irq, de_irq_wait_handler, &completion);
 	
 	if (r) {

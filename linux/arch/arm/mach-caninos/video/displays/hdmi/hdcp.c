@@ -144,7 +144,6 @@ void hdcp_set_key(unsigned char *key) {
     }
 }
 
-
 int hdcp_anlay_SRM(unsigned char *srm, unsigned char *srm_buf) {
     unsigned int tmp = 0;
     int j = 0, i = 0, k = 0;
@@ -172,7 +171,6 @@ int hdcp_anlay_SRM(unsigned char *srm, unsigned char *srm_buf) {
 
 }
 
-
 /*
   * check if Bksv is valid, need have 20 "1"  and 20 "0"
   */
@@ -195,8 +193,6 @@ int Check_Bksv_Invalid(void) {
     }
 
     if (counter != 20) {
-        DEBUG_ERR("[%s]fail  0x%x 0x%x 0x%x 0x%x 0x%x\n", __func__, hdmi.ip_data.hdcp.Bksv[0], hdmi.ip_data.hdcp.Bksv[1], \
-		hdmi.ip_data.hdcp.Bksv[2], hdmi.ip_data.hdcp.Bksv[3], hdmi.ip_data.hdcp.Bksv[4]);
         return 0;
     }
 
@@ -361,7 +357,7 @@ int hdcp_SetKm(unsigned char *key, int pnt) {
     /* write to HW */
     /*P_HDCP_DPKLR*/
     tmp = pnt | (dKey[0] << 8) | (dKey[1] << 16) | (dKey[2] << 24);
-	//HDCP_DEBUG("gl+++ km %x\n", tmp);
+
     owl_hdmi_write(tmp, HDCP_DPKLR);
     /*P_HDCP_DPKMR*/
     tmp = dKey[3] | (dKey[4] << 8) | (dKey[5] << 16) | (dKey[6] << 24);
@@ -911,7 +907,7 @@ int check_ri_irq(void)
 {
     unsigned int tmp;
     tmp = owl_hdmi_read(HDCP_SR);
-	HDCP_DEBUG("HDCP_SR 0x%x\n", tmp);
+
 	if(tmp&HDCP_SR_RIUPDATED)
 	{
 		tmp |= HDCP_SR_RIUPDATED;
