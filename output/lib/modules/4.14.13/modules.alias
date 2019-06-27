@@ -4543,14 +4543,9 @@ alias usb:v0E41p4153d*dc*dsc*dp*ic*isc*ip*in* snd_usb_toneport
 alias usb:v0E41p4750d*dc*dsc*dp*ic*isc*ip*in* snd_usb_toneport
 alias usb:v0E41p534Dd*dc*dsc*dp*ic*isc*ip*in* snd_usb_variax
 alias usb:v0E41p4650d*dc*dsc*dp*ic*isc*ip*in01* snd_usb_variax
-alias netdev-tunl0 ipip
-alias rtnl-link-ipip ipip
-alias netdev-erspan0 ip_gre
-alias netdev-gretap0 ip_gre
-alias netdev-gre0 ip_gre
-alias rtnl-link-erspan ip_gre
-alias rtnl-link-gretap ip_gre
-alias rtnl-link-gre ip_gre
+alias ip_conntrack nf_conntrack_ipv4
+alias nf_conntrack-2 nf_conntrack_ipv4
+alias nf-nat-2 nf_nat_ipv4
 alias xfrm-type-10-51 ah6
 alias xfrm-type-10-50 esp6
 alias xfrm-offload-10-50 esp6_offload

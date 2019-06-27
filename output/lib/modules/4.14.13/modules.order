@@ -514,10 +514,12 @@ kernel/sound/usb/line6/snd-usb-pod.ko
 kernel/sound/usb/line6/snd-usb-podhd.ko
 kernel/sound/usb/line6/snd-usb-toneport.ko
 kernel/sound/usb/line6/snd-usb-variax.ko
-kernel/net/ipv4/ip_tunnel.ko
-kernel/net/ipv4/ipip.ko
-kernel/net/ipv4/gre.ko
-kernel/net/ipv4/ip_gre.ko
+kernel/net/ipv4/netfilter/nf_conntrack_ipv4.ko
+kernel/net/ipv4/netfilter/nf_nat_ipv4.ko
+kernel/net/ipv4/netfilter/nf_defrag_ipv4.ko
+kernel/net/ipv4/netfilter/nf_nat_masquerade_ipv4.ko
+kernel/net/ipv4/netfilter/iptable_nat.ko
+kernel/net/ipv4/netfilter/ipt_MASQUERADE.ko
 kernel/net/ipv6/ah6.ko
 kernel/net/ipv6/esp6.ko
 kernel/net/ipv6/esp6_offload.ko
