@@ -5,10 +5,11 @@ obj-y += hdmac.o serial.o
 obj-y += wifibt.o emmc.o
 obj-y += usb/
 obj-y += video/
+#obj-y += ethernet.o
 #obj-y += sound/
 
 
-#
-#obj-y += ethernet.o
-#
+
+
+
 

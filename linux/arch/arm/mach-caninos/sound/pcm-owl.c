@@ -26,11 +26,9 @@ static struct snd_pcm_hardware atm7059_playback_hw_info = {
 	.rate_max		= 192000,
 	.channels_min		= 2,
 	.channels_max		= 8,
-	#ifdef CONFIG_SND_UBUNTU
+
 	.buffer_bytes_max	= 32 * 1024,
-	#else
-	.buffer_bytes_max	= 64 * 1024,
-	#endif
+
 	.period_bytes_min	= 256,
 	.period_bytes_max	= 32*1024,
 	.periods_min		= 2,
@@ -424,6 +422,7 @@ static struct platform_driver atm7059_pcm_driver = {
 };
 
 static struct platform_device *atm7059_pcm_device;
+
 static int __init atm7059_pcm_init(void)
 {
 	int ret;
@@ -431,6 +430,7 @@ static int __init atm7059_pcm_init(void)
 	struct atm7059_pcm_priv *pcm_priv;
 
 	snd_dbg("atm7059_pcm_init!!\n");
+	
 	atm7059_pcm_device = platform_device_alloc("atm7059-pcm-audio", -1);
 	if (!atm7059_pcm_device) {
 		snd_dbg(

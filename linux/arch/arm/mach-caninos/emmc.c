@@ -205,7 +205,7 @@ static int sdiohost_dma_prepare_data(struct mmc_host * mmc, struct mmc_data *dat
 	
 	if (dmaengine_slave_config(host->dma, &host->dma_conf))
 	{
-		dev_err(mmc->parent, "failed to configure DMA channel\n");
+		
 		return -EINVAL;
 	}
 
@@ -214,7 +214,7 @@ static int sdiohost_dma_prepare_data(struct mmc_host * mmc, struct mmc_data *dat
 		
 	if (!host->desc)
 	{
-		dev_err(mmc->parent, "dmaengine_prep_slave_sg failed\n");
+		
 		return -EBUSY;
 	}
 
@@ -387,7 +387,7 @@ static void sdiohost_snd_rcv(struct mmc_host * mmc, struct mmc_command *cmd,
     
     if (total != 0 && wait_for_completion_timeout(&host->dma_complete, msecs_to_jiffies(2000)) == 0)
     {
-        dev_err(mmc->parent, "CMD%u ARG = 0x%x - dma operation timeout\n", opcode, arg);
+        
         sdc_reset_hardware_state_mach(mmc);
         dmaengine_terminate_all(host->dma);
         
@@ -402,7 +402,7 @@ static void sdiohost_snd_rcv(struct mmc_host * mmc, struct mmc_command *cmd,
     
     if (!(state & SD_STATE_CLC))
     {
-        dev_err(mmc->parent, "CMD%u ARG = 0x%x - transmission timeout\n", opcode, arg);
+        
         sdc_reset_hardware_state_mach(mmc);
         
         *err_cmd  = -ETIMEDOUT;
@@ -415,7 +415,7 @@ static void sdiohost_snd_rcv(struct mmc_host * mmc, struct mmc_command *cmd,
     {
         if (state & SD_STATE_CLNR)
         {
-        	dev_err(mmc->parent, "CMD%u ARG = 0x%x - no response\n", opcode, arg);
+        	
             sdc_reset_hardware_state_mach(mmc);
             
             *err_cmd  = -EILSEQ;
@@ -426,7 +426,7 @@ static void sdiohost_snd_rcv(struct mmc_host * mmc, struct mmc_command *cmd,
         
         if (crc && state & SD_STATE_CRC7ER)
         {
-            dev_err(mmc->parent, "CMD%u ARG = 0x%x - response crc error\n", opcode, arg);
+            
             sdc_reset_hardware_state_mach(mmc);
             
             *err_cmd  = -EILSEQ;
@@ -461,7 +461,7 @@ static void sdiohost_snd_rcv(struct mmc_host * mmc, struct mmc_command *cmd,
 	    { 
 	        if (state & SD_STATE_WC16ER)
 	        {
-	            dev_err(mmc->parent, "CMD%u ARG = 0x%x - write data crc error\n", opcode, arg);
+	            
                 sdc_reset_hardware_state_mach(mmc);
                 
                 *err_data = -EILSEQ;
@@ -473,7 +473,7 @@ static void sdiohost_snd_rcv(struct mmc_host * mmc, struct mmc_command *cmd,
 	    {
 	        if (state & SD_STATE_RC16ER)
 	        {
-	            dev_err(mmc->parent, "CMD%u ARG = 0x%x - read data crc error\n", opcode, arg);
+	            
                 sdc_reset_hardware_state_mach(mmc);
                 
                 *err_data = -EILSEQ;
@@ -498,7 +498,7 @@ static void sdiohost_request(struct mmc_host * mmc, struct mmc_request * mrq)
     {
     	if (!mrq->cmd) 
     	{
-    		dev_err(mmc->parent, "data transfer only request not supported\n");
+    		
     		mrq->data->error = -EINVAL;
     		mmc_request_done(mmc, mrq);
     		return;
@@ -506,7 +506,7 @@ static void sdiohost_request(struct mmc_host * mmc, struct mmc_request * mrq)
     	
         if (sdiohost_dma_prepare_data(mmc, mrq->data) < 0)
         {
-        	dev_err(mmc->parent, "dma prepare data error\n");
+        	
         	mrq->data->error = -EINVAL;
             mmc_request_done(mmc, mrq);
             return;

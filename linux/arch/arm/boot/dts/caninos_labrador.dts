@@ -130,6 +130,27 @@
 		    
 		    state_default: pinctrl_default {
 		    };
+		    
+		    serial0_state_default: serial0_default{
+				serial_0{
+					actions,groups = "mfp2_2_0","mfp3_21_19";
+					actions,function = "uart0";
+				};
+			};
+
+			serial1_state_default: serial1_default{
+				serial_1{
+					actions,groups = "mfp2_13_11";
+					actions,function = "uart1";
+				};
+			};
+		    
+		    serial2_state_default: serial2_default{
+				serial_2{
+					caninos,groups = "mfp2_23","mfp2_22","uart2_dummy";
+					caninos,function = "uart2";
+				};
+			};
 
 		    serial3_state_default: serial3_default{
 			    serial_3{
@@ -137,6 +158,27 @@
 				    caninos,function = "uart3";
 			    };
 		    };
+		    
+		    serial4_state_default: serial4_default{
+				serial_4{
+					actions,groups = "uart4_dummy";
+					actions,function = "uart4";
+				};
+			};
+
+			serial5_state_default: serial5_default{
+				serial_5{
+					actions,groups = "mfp2_19_17","mfp2_16_14";
+					actions,function = "uart5";
+				};
+			};
+
+			serial6_state_default: serial6_default{
+				serial_6{
+					actions,groups = "mfp0_18_16_eth_txd0", "mfp0_18_16_eth_txd1";
+					actions,function = "uart6";
+				};
+			};
 		    
 		    mmc0_state_default: mmc0_default {
 			    sd0_mfp_d0_d3_cmd_clk {
@@ -227,13 +269,19 @@
 		    compatible = "caninos,labrador-uart";
 		    reg = <0xb0120000 0x2000>;
 		    interrupts = < 0 29 0x4 >;
-		    status = "disabled";
+		    clock-frequency = <48000000>;
+		    pinctrl-names = "default";
+		    pinctrl-0 = <&serial0_state_default>;
+		    status = "okay";
 	    };
 
 	    uart1: serial@b0122000 {
 		    compatible = "caninos,labrador-uart";
 		    reg = <0xb0122000 0x2000>;
 		    interrupts = < 0 30 0x4 >;
+		    clock-frequency = <48000000>;
+		    pinctrl-names = "default";
+		    pinctrl-0 = <&serial1_state_default>;
 		    status = "disabled";
 	    };
 
@@ -241,7 +289,10 @@
 		    compatible = "caninos,labrador-uart";
 		    reg = <0xb0124000 0x2000>;
 		    interrupts = < 0 31 0x4 >;
-		    status = "disabled";
+		    clock-frequency = <48000000>;
+		    pinctrl-names = "default";
+		    pinctrl-0 = <&serial2_state_default>;
+		    status = "okay";
 	    };
 
 	    uart3: serial@b0126000 {
@@ -258,6 +309,9 @@
 		    compatible = "caninos,labrador-uart";
 		    reg = <0xb0128000 0x2000>;
 		    interrupts = < 0 33 0x4 >;
+		    clock-frequency = <48000000>;
+		    pinctrl-names = "default";
+		    pinctrl-0 = <&serial4_state_default>;
 		    status = "disabled";
 	    };
 
@@ -265,6 +319,9 @@
 		    compatible = "caninos,labrador-uart";
 		    reg = <0xb012a000 0x2000>;
 		    interrupts = < 0 34 0x4 >;
+		    clock-frequency = <48000000>;
+		    pinctrl-names = "default";
+		    pinctrl-0 = <&serial5_state_default>;
 		    status = "disabled";
 	    };
 
@@ -272,6 +329,9 @@
 		    compatible = "caninos,labrador-uart";
 		    reg = <0xb012c000 0x2000>;
 		    interrupts = < 0 35 0x4 >;
+		    clock-frequency = <48000000>;
+		    pinctrl-names = "default";
+		    pinctrl-0 = <&serial6_state_default>;
 		    status = "disabled";
 	    };
 	    
@@ -396,10 +456,6 @@
 		    compatible = "caninos,labrador-clk";
 		    reg = <0xb0160000 0x8000>;
 		    #clock-cells = <1>;
-	    };
-	    
-	    cpufreq {
-		    compatible = "caninos,labrador-cpufreq";
 	    };
 	    
 	    timer@b0020600 {
