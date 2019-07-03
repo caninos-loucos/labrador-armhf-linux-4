@@ -2,8 +2,9 @@
     Filename: ethernet.c
     Module  : Caninos Labrador Ethernet Driver
     Author  : Edgar Bernardi Righi
+    Revisor : Igor Ruschi
     Company : LSITEC
-    Date    : January 2019
+    Date    : June 2019
 */
 
 #include <linux/module.h>
@@ -20,7 +21,9 @@
 #include <linux/workqueue.h>
 #include <linux/interrupt.h>
 #include <linux/spinlock.h>
+#include <linux/random.h>
 #include <uapi/linux/mii.h>
+#include <linux/delay.h>
 
 #include <mach/hardware.h>
 #include <mach/clkname.h>
@@ -32,10 +35,16 @@
 #define INFO_MSG(fmt,...) pr_info(DRIVER_NAME ": " fmt, ##__VA_ARGS__)
 #define ERR_MSG(fmt,...) pr_err(DRIVER_NAME ": " fmt, ##__VA_ARGS__)
 
-struct ethernet_gpio {
+/*struct ethernet_gpio {
     int gpio;
     int active;
-};
+};*/
+
+
+typedef struct{
+	int phy_reset_gpio;
+	int phy_power_gpio;
+}  phy_gpio;
 
 // receive and transmit buffer descriptor
 
@@ -130,7 +139,7 @@ struct ethernet_buffer_desc {
 #define EC_RX_run_dsp 	(0x7 <<17)
 #define EC_TX_run_dsp  (0x3 << 20)
 
-#define EC_BMODE_SWR (0x1) // software reset
+#define EC_BMODE_SWR (0x1) // software resetcani
 #define EC_CACHETHR_CPTL(x) (((x) & 0xFF) << 24) // cache pause threshold level
 #define EC_CACHETHR_CRTL(x) (((x) & 0xFF) << 16) // cache restart threshold level
 #define EC_CACHETHR_PQT(x)  ((x) & 0xFFFF) // flow control pause quanta time
@@ -183,6 +192,7 @@ struct ethernet_buffer_desc {
 ///////
 
 static char default_mac_addr[ETH_MAC_LEN] = {0x00, 0x18, 0xFE, 0x61, 0xD5, 0xD6};
+static char mac_addr[ETH_MAC_LEN];
 
 static struct clk * ethernet_clk = NULL;
 static struct pinctrl * ethernet_ppc = NULL;
@@ -214,19 +224,36 @@ static bool ethernet_tx_full = false;
 
 static DEFINE_SPINLOCK(ethernet_lock);
 
-static struct ethernet_gpio phy_power_gpio;
-static struct ethernet_gpio phy_reset_gpio;
+static phy_gpio global_phy_gpio;
+//static struct ethernet_gpio phy_power_gpio;
+//static struct ethernet_gpio phy_reset_gpio;
+
 
 static void ethernet_phy_state_worker(struct work_struct *);
 
 static DECLARE_DELAYED_WORK(ethernet_phy_state_work, ethernet_phy_state_worker);
 
-///////
+/*generate an random mac address*/
+static int mac_gen(void){
+    int ret = 0, i = 0;
+    unsigned int rand_num = 0;
+    char *mac = (char *) mac_addr;
+    while(i<6){
+        get_random_bytes(&rand_num, sizeof(char));
+        if(i == 0){
+            mac[i] = 0x02;//localy administrated    
+        }else{
+            mac[i] = rand_num;
+        }
+        i++;
+    }
+
+    return ret;
+}
 
 static int ethernet_set_pin_mux(struct platform_device * pdev)
 {
-	int ret = 0;
-
+    u32 temp;
 	ethernet_ppc = pinctrl_get_select_default(&pdev->dev);
 	
 	if (IS_ERR(ethernet_ppc))
@@ -237,6 +264,12 @@ static int ethernet_set_pin_mux(struct platform_device * pdev)
 	
 	act_writel(act_readl(MFP_CTL3) | (0x1 << 30), MFP_CTL3);
 	act_writel((act_readl(PAD_DRV0) & 0xffff3fff) | 0x8000, PAD_DRV0);
+
+    //setting the mux of GPIOB11/OEN to digital, otherwise GPIO will not work
+    temp = act_readl(MFP_CTL1);
+    temp &= ~(0x3<<21);//mask
+    temp |= (0x2<<21);//set bits[22:21] = 0b10
+    act_writel(temp, MFP_CTL1);
 	return 0;
 }
 
@@ -387,7 +420,7 @@ static int ethernet_mac_init(void)
 
 
 
-static int ethernet_parse_gpio(struct device_node * of_node, const char * propname, struct ethernet_gpio * gpio)
+/*static int ethernet_parse_gpio(struct device_node * of_node, const char * propname, struct ethernet_gpio * gpio)
 {
     enum of_gpio_flags gflags;
     int	gpio_num;
@@ -414,7 +447,8 @@ static int ethernet_parse_gpio(struct device_node * of_node, const char * propna
     
     gpio->active = (gflags & OF_GPIO_ACTIVE_LOW);
     return 0;
-}
+}*/
+
 
 static int ethernet_write_phy_reg(u16 reg_addr, u16 val)
 {
@@ -482,8 +516,8 @@ static int ethernet_phy_get_link(bool * linked)
     u16 bmsr;
     int ret;
     
-    ret = ethernet_read_phy_reg(MII_BMSR, &bmsr);
     
+    ret = ethernet_read_phy_reg(MII_BMSR, &bmsr);
     if (ret < 0) {
         return ret;
     }
@@ -622,7 +656,7 @@ static int ethernet_phy_set_mode(bool speed, bool duplex)
 static int ethernet_phy_start_autoneg(void)
 {
     int ret;
-    u16 adv, bmcr_val;
+    u16 adv;
     
     ret = ethernet_read_phy_reg(MII_ADVERTISE, &adv);
     
@@ -695,6 +729,8 @@ static int ethernet_phy_init(void)
 	ethernet_write_phy_reg(PHY_RTL8201F_REG_PAGE_SELECT, PHY_RTL8201F_REG_PAGE_SELECT_ZERO);
 	
 	ethernet_phy_start_autoneg();
+
+    netif_carrier_off(ethernet_dev);
 	
 	INFO_MSG("Phy is not linked\n");
 	
@@ -807,8 +843,9 @@ static char * ethernet_build_setup_frame(char * buffer, int buf_len)
     
     memset(frame, 0, SETUP_FRAME_LEN);
 
-    mac = (char *) default_mac_addr;
-    
+
+    mac = (char *) mac_addr;
+
     COPY_MAC_ADDR(frame, mac);
     
     mac = broadcast_mac;
@@ -1141,7 +1178,6 @@ static irqreturn_t ethernet_isr(int irq, void *cookie)
 	unsigned long mac_status;
 	
 	int ru_cnt = 0;
-	int i = 0;
 	
 	intr_bits = EC_STATUS_NIS | EC_STATUS_AIS;
 	
@@ -1224,6 +1260,7 @@ static int ethernet_netdev_start_xmit(struct sk_buff * skb,
     
     if (!ethernet_phy_linked) // this is not an error
     {
+        INFO_MSG("link is already down");
         dev_kfree_skb(skb);
         goto out;
     }
@@ -1284,7 +1321,7 @@ static int ethernet_netdev_start_xmit(struct sk_buff * skb,
         ethernet_tx_full = true;
     }
     
-    netif_stop_queue(ethernet_dev);
+    netif_stop_queue(ethernet_dev); 
     
 out:    
     spin_unlock_irqrestore(&ethernet_lock, flags);
@@ -1395,9 +1432,9 @@ static int ethernet_mac_setup(void)
 	
 	// set mac address
 	
-	act_writel(*(u32 *)(default_mac_addr), MAC_CSR16);
-    act_writel(*(u16 *)(default_mac_addr + 4), MAC_CSR17);
-    
+    act_writel(*(u32 *)(mac_addr), MAC_CSR16);
+    act_writel(*(u16 *)(mac_addr + 4), MAC_CSR17);
+
     // stop tx and rx and disable interrupts
     
     act_writel(act_readl(MAC_CSR6) & (~(EC_OPMODE_ST | EC_OPMODE_SR)), MAC_CSR6);
@@ -1478,8 +1515,8 @@ static int ethernet_mac_start(bool speed, bool duplex)
 	
 	// set mac address
 	
-	act_writel(*(u32 *)(default_mac_addr), MAC_CSR16);
-    act_writel(*(u16 *)(default_mac_addr + 4), MAC_CSR17);
+    act_writel(*(u32 *)(mac_addr), MAC_CSR16);
+    act_writel(*(u16 *)(mac_addr + 4), MAC_CSR17);
     
     // send out a mac setup frame
     
@@ -1507,6 +1544,7 @@ static int ethernet_mac_start(bool speed, bool duplex)
     act_writel(EC_IEN_ALL, MAC_CSR7);
     act_writel(act_readl(MAC_CSR6) | EC_OPMODE_ST | EC_OPMODE_SR, MAC_CSR6);
     
+    INFO_MSG("MAC STARTED OK!");
 	return 0;
 }
 
@@ -1534,44 +1572,67 @@ static int ethernet_mac_stop(void)
 
 ////////////////////////////////////////////////////////////////////////////////
 
+
 static int ethernet_phy_setup(void)
 {
     u32 cnt, phy_id;
 	u16 reg_val;
-	
 	ethernet_phy_linked = false;
 	
-	if ((phy_power_gpio.gpio > 0) && gpio_is_valid(phy_power_gpio.gpio))
+	if (gpio_is_valid(global_phy_gpio.phy_power_gpio))
 	{ 
-		gpio_direction_output(phy_power_gpio.gpio, !phy_power_gpio.active);
+		gpio_set_value(global_phy_gpio.phy_power_gpio, 1);	
+	}else{
+		ERR_MSG("phy_power_gpio is no Valid");
+		return -ENOMEM;
 	}
 	
-	if ((phy_reset_gpio.gpio > 0) && gpio_is_valid(phy_reset_gpio.gpio))
-	{		        
-		gpio_direction_output(phy_reset_gpio.gpio, phy_reset_gpio.active);
-		
-		mdelay(10);
-		
-		gpio_direction_output(phy_reset_gpio.gpio, !phy_reset_gpio.active);	
+	if (gpio_is_valid(global_phy_gpio.phy_reset_gpio))
+	{		
+		gpio_set_value(global_phy_gpio.phy_reset_gpio, 1);
+		mdelay(150);//time for power up
+		gpio_set_value(global_phy_gpio.phy_reset_gpio, 0);
+		mdelay(12);//time for reset
+		gpio_set_value(global_phy_gpio.phy_reset_gpio, 1);
+
+		INFO_MSG("Reset_Done");	
+	}else{
+		ERR_MSG("phy_reset_gpio is no Valid");
+		return -ENOMEM;
 	}
-	
-	mdelay(20);
-	
-	ethernet_phy_reg_set_bits(MII_BMCR, BMCR_RESET);
-	
+	//time required to access registers
+	mdelay(150);
+
+	//soft reset is not necessary
+	//ethernet_phy_reg_set_bits(MII_BMCR, BMCR_RESET);
+	//mdelay(50);
 	cnt = 0;
-	
+	INFO_MSG("ETHERNET POWERED UP");
 	do
 	{
-		ethernet_read_phy_reg(MII_BMCR, &reg_val);
 		
-		if (cnt++ > 1000)
+		ethernet_read_phy_reg(MII_BMCR, &reg_val);
+		//udelay(20);
+		
+		if(reg_val & BMCR_PDOWN){ //so power is off;
+			//try to force the power on
+            INFO_MSG("Power is off (Should not happen!");
+			ethernet_phy_reg_set_bits(MII_BMCR, !BMCR_PDOWN);
+            mdelay(20);
+		}
+       		 if(reg_val & BMCR_RESET){ //so RESET is enable
+			//try to force out of reset state
+            INFO_MSG("Device is in Reset(should not happen!)");
+			ethernet_phy_reg_set_bits(MII_BMCR, BMCR_RESET);
+            mdelay(20);
+		}
+		if (cnt++ > 60)
 		{
 			ERR_MSG("Ethernet phy BMCR_RESET timedout\n");
 			return -ETIMEDOUT;
 		}
 		
-	} while (reg_val & BMCR_RESET);
+	} while ((reg_val & BMCR_PDOWN) & (reg_val & BMCR_RESET));
 	
 	// get the phy ID
 	
@@ -1611,8 +1672,9 @@ static int ethernet_phy_setup(void)
 	ethernet_phy_start_autoneg();
 	
 	INFO_MSG("Phy is not linked\n");
+    
 	
-	netif_carrier_off(ethernet_dev);
+	netif_carrier_off(ethernet_dev);/////////////////////////////////////////////////////////
 	
 	schedule_delayed_work(&ethernet_phy_state_work, 
 	                      msecs_to_jiffies(PHY_POLL_INTERVAL));
@@ -1628,7 +1690,6 @@ static void ethernet_tx_buffer_free(void)
     dma_addr_t * paddr = &ethernet_tx_buf_paddr, tmp;
     struct device * dev = &ethernet_dev->dev;
     int i;
-    
     if (!ethernet_tx_buf) {
         return;
     }
@@ -1661,13 +1722,12 @@ static int ethernet_tx_buffer_alloc(void)
     const u32 total = sizeof(struct ethernet_buffer_desc) * TX_RING_SIZE;
     dma_addr_t * paddr = &ethernet_tx_buf_paddr;
     int i;
-    
     for (i = 0; i < TX_RING_SIZE; i++) {
         ethernet_tx_skb[i] = NULL;
     }
-    
-    ethernet_tx_buf = dma_alloc_coherent(NULL, total, paddr, GFP_KERNEL);
-    
+    //GFP_ATOMIC
+    //ethernet_tx_buf = dma_alloc_coherent(NULL, total, paddr, GFP_KERNEL);
+    ethernet_tx_buf = dma_alloc_coherent(NULL, total, paddr, GFP_NOWAIT);
     if (!ethernet_tx_buf)
     {
         ethernet_tx_buf = NULL;
@@ -1701,7 +1761,6 @@ static void ethernet_rx_buffer_free(void)
     dma_addr_t * paddr = &ethernet_rx_buf_paddr, tmp;
     struct device * dev = &ethernet_dev->dev;
     int i;
-    
     if (!ethernet_rx_buf) {
         return;
     }
@@ -1736,12 +1795,12 @@ static int ethernet_rx_buffer_alloc(void)
     struct device * dev = &ethernet_dev->dev;
     struct sk_buff * skb;
     int i;
-    
+    INFO_MSG("rx_buffer_alloc");
     for (i = 0; i < RX_RING_SIZE; i++) {
         ethernet_rx_skb[i] = NULL;
     }
     
-    ethernet_rx_buf = dma_alloc_coherent(NULL, total, paddr, GFP_KERNEL);
+    ethernet_rx_buf = dma_alloc_coherent(NULL, total, paddr, GFP_NOWAIT);
     
     if (!ethernet_rx_buf)
     {
@@ -1797,14 +1856,13 @@ static void ethernet_phy_state_worker(struct work_struct * _unused)
     int ret;
     
     spin_lock_irqsave(&ethernet_lock, flags);
-    
+
     ret = ethernet_phy_get_link(&linked);
-    
     if (ret)
     {
         ERR_MSG("Could not get phy link state\n");
         goto out;
-    }
+    } 
     
     if (linked != ethernet_phy_linked)
     {
@@ -1812,6 +1870,7 @@ static void ethernet_phy_state_worker(struct work_struct * _unused)
         
         if (linked)
         {
+            INFO_MSG("IS LINKED");
             ret = ethernet_phy_read_status(&speed, &full);
             
             if (ret)
@@ -1829,9 +1888,12 @@ static void ethernet_phy_state_worker(struct work_struct * _unused)
             ethernet_phy_set_mode(speed, full);
             
             netif_carrier_on(ethernet_dev);
+            INFO_MSG("phy_set_ok!"); 
+            
         }
         else
         {
+
             INFO_MSG("Phy is not linked\n");
             
             netif_carrier_off(ethernet_dev);
@@ -1843,9 +1905,12 @@ static void ethernet_phy_state_worker(struct work_struct * _unused)
     }
     
 out: 
-    schedule_delayed_work(&ethernet_phy_state_work, 
+    if(linked){//do nothing
+    }
+    else{
+        schedule_delayed_work(&ethernet_phy_state_work, 
                           msecs_to_jiffies(PHY_POLL_INTERVAL));
-    
+    }
     spin_unlock_irqrestore(&ethernet_lock, flags);
 }
 
@@ -1891,20 +1956,68 @@ static void ethernet_netdev_uninit(struct net_device * _unused)
 
 ////////////////////////////////////////////////////////////////////////////////
 
+
+static int ethernet_netdev_set_mac_address(struct net_device *ndev, void *address)
+{
+    char *mac = (char*)mac_addr; //pointer to global mac_address
+
+    address = (void*)((char*)address + 2);//i don't know why of this offset is necessary
+
+    if (address){
+
+        memcpy(ndev->dev_addr, address, sizeof(default_mac_addr));
+        if (!is_valid_ether_addr(ndev->dev_addr)){
+            eth_random_addr(ndev->dev_addr);
+            INFO_MSG("MAC Address is not valid, randomic was inserted instead!");
+        }
+        //update global mac_address variable
+        memcpy(mac, ndev->dev_addr, sizeof(default_mac_addr));
+
+        //set mac
+        act_writel(*(u32 *)(mac_addr), MAC_CSR16);
+        act_writel(*(u16 *)(mac_addr + 4), MAC_CSR17);
+
+        //broke link
+        ethernet_phy_start_autoneg();
+
+        netif_carrier_off(ethernet_dev);
+	
+	    INFO_MSG("Phy is not linked\n");
+        INFO_MSG("New MAC: %X:%X:%X:%X:%X:%X",mac_addr[0],mac_addr[1],mac_addr[2],mac_addr[3],mac_addr[4],mac_addr[5]);
+
+        //get new link
+        schedule_delayed_work(&ethernet_phy_state_work, 
+                          msecs_to_jiffies(PHY_POLL_INTERVAL));
+    }else{
+        INFO_MSG("MAC Address is NULL");
+    }
+        
+        
+    return 0;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
 static const struct net_device_ops ethernet_netdev_ops = {
     .ndo_init = ethernet_netdev_init,
     .ndo_uninit = ethernet_netdev_uninit,
     .ndo_open = ethernet_netdev_open,
     .ndo_stop = ethernet_netdev_close,
     .ndo_start_xmit = ethernet_netdev_start_xmit,
+    .ndo_set_mac_address = ethernet_netdev_set_mac_address
 };
 
 static int __init eth_driver_probe(struct platform_device * pdev)
 {
     int ret, irq;
-    
-    INFO_MSG("Probe started\n");
-    
+    struct device *dev = &pdev->dev;
+
+    //Generate a random Mac Address to begin
+    if(!mac_gen()){
+        INFO_MSG("MAC ADDR: %X:%X:%X:%X:%X:%X",mac_addr[0],mac_addr[1],mac_addr[2],mac_addr[3],mac_addr[4],mac_addr[5]);
+    }
+
+    platform_set_drvdata(pdev, NULL);
     irq = platform_get_irq(pdev, 0);
     
 	if (irq < 0)
@@ -1945,23 +2058,46 @@ static int __init eth_driver_probe(struct platform_device * pdev)
         ret = -ENODEV;
         goto out_error;
 	}
+
+	global_phy_gpio.phy_reset_gpio = 
+		of_get_named_gpio(dev->of_node, "phy-reset-gpio", 0);
+	
+	if (!gpio_is_valid(global_phy_gpio.phy_reset_gpio))
+	{
+		dev_err(dev, "could not get reset gpio\n");
+		return -ENODEV;
+	}
+	global_phy_gpio.phy_power_gpio = 
+		of_get_named_gpio(dev->of_node, "phy-power-gpio", 0);
+	
+	if (!gpio_is_valid(global_phy_gpio.phy_power_gpio))
+	{
+		dev_err(dev, "could not get power gpio\n");
+		return -ENODEV;
+	}
     
-    ret = ethernet_parse_gpio(pdev->dev.of_node, "phy-power-gpio", &phy_power_gpio);
-    
+    ret = devm_gpio_request(dev, global_phy_gpio.phy_reset_gpio, "phy_reset");
+	
 	if (ret)
 	{
-	    ERR_MSG("Could not get phy power gpio\n");
-        goto out_error;
+		dev_err(dev, "could not request reset gpio\n");
+		return ret;
 	}
+    ret = devm_gpio_request(dev, global_phy_gpio.phy_power_gpio, "phy_power");
+	
+	if (ret)
+	{
+		dev_err(dev, "could not request power gpio\n");
+		return ret;
+	}
+	
+    
+    gpio_direction_output(global_phy_gpio.phy_reset_gpio, 0);
+	gpio_direction_output(global_phy_gpio.phy_power_gpio, 0);
+    gpio_set_value(global_phy_gpio.phy_power_gpio, 0);
+ 
+    gpio_set_value(global_phy_gpio.phy_reset_gpio, 0);
 		
-	ret = ethernet_parse_gpio(pdev->dev.of_node, "phy-reset-gpio", &phy_reset_gpio);
-	
-	if (ret)
-	{
-		ERR_MSG("Could not get phy reset gpio\n");
-        goto out_error;
-	}
-	
 	SET_NETDEV_DEV(ethernet_dev, &pdev->dev);
 	
     sprintf(ethernet_dev->name, "eth0");
@@ -1969,9 +2105,8 @@ static int __init eth_driver_probe(struct platform_device * pdev)
 	ethernet_dev->irq = irq;
 	ethernet_dev->watchdog_timeo = EC_TX_TIMEOUT;
 	ethernet_dev->netdev_ops = &ethernet_netdev_ops;
-	
-	memcpy(ethernet_dev->dev_addr, default_mac_addr, sizeof(default_mac_addr));
-	
+
+	memcpy(ethernet_dev->dev_addr, mac_addr, sizeof(default_mac_addr));
     ret = register_netdev(ethernet_dev);
     
 	if (ret)
@@ -1980,6 +2115,7 @@ static int __init eth_driver_probe(struct platform_device * pdev)
 		goto out_error;
 	}
 	
+	platform_set_drvdata(pdev, &global_phy_gpio);
     return 0;
     
 out_error:
@@ -1990,16 +2126,16 @@ out_error:
         ethernet_dev = NULL;
     }
     
-    if (phy_power_gpio.gpio < 0)
+    if (global_phy_gpio.phy_power_gpio < 0)
     {
-        gpio_free(phy_power_gpio.gpio);
-        phy_power_gpio.gpio = -1;
+        gpio_free(global_phy_gpio.phy_power_gpio);
+        global_phy_gpio.phy_power_gpio = -1;
     }
     
-    if (phy_reset_gpio.gpio < 0)
+    if (global_phy_gpio.phy_reset_gpio < 0)
     {
-        gpio_free(phy_reset_gpio.gpio);
-        phy_reset_gpio.gpio = -1;
+        gpio_free(global_phy_gpio.phy_reset_gpio);
+        global_phy_gpio.phy_reset_gpio = -1;
     }
 
     ethernet_put_clk();
@@ -2017,16 +2153,16 @@ static int __exit eth_driver_remove(struct platform_device *pdev)
         ethernet_dev = NULL;
     }
     
-    if (phy_power_gpio.gpio < 0)
+    if (global_phy_gpio.phy_power_gpio < 0)
     {
-        gpio_free(phy_power_gpio.gpio);
-        phy_power_gpio.gpio = -1;
+        gpio_free(global_phy_gpio.phy_power_gpio);
+        global_phy_gpio.phy_power_gpio = -1;
     }
     
-    if (phy_reset_gpio.gpio < 0)
+    if (global_phy_gpio.phy_reset_gpio < 0)
     {
-        gpio_free(phy_reset_gpio.gpio);
-        phy_reset_gpio.gpio = -1;
+        gpio_free(global_phy_gpio.phy_reset_gpio);
+        global_phy_gpio.phy_reset_gpio = -1;
     }
 
     ethernet_put_clk();
@@ -2053,8 +2189,11 @@ static struct platform_driver __refdata eth_driver = {
 
 static int __init eth_driver_init(void)
 {
+	INFO_MSG("Init_ETH_Driver");
 	return platform_driver_register(&eth_driver);
 }
+//module_init(eth_driver_init);
+MODULE_LICENSE("GPL");
 
 late_initcall(eth_driver_init);
 
