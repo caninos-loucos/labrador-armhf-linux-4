@@ -20,10 +20,13 @@ void wifibt_turn_on(void)
 	if (data)
 	{
 		gpio_set_value(data->wifi_power_gpio, 1);
-    
-    	mdelay(15);
-    
+		//25ms is required by wilc3000, 15ms for RTL8723BS
+    	mdelay(25);
+		//ch_en
     	gpio_set_value(data->wifi_enable_gpio, 1);
+		mdelay(10);
+		//reset_n for wilc3000, bt for RTL8723BS
+		gpio_set_value(data->bt_enable_gpio, 1);
     	
     	pr_info("wifi/bt module turned on\n");
     }
@@ -39,6 +42,8 @@ void wifibt_turn_off(void)
 		gpio_set_value(data->wifi_enable_gpio, 0);
     
     	gpio_set_value(data->wifi_power_gpio, 0);
+
+		gpio_set_value(data->bt_enable_gpio, 0);
     
     	mdelay(15);
     	

@@ -316,6 +316,28 @@ static int owl_uart_startup(struct uart_port *port)
 static void owl_uart_change_baudrate(struct owl_uart_port *owl_port,
 				     unsigned long baud)
 {
+	struct clk *parent;
+
+	//if baud rate is bigger than 115200 use DEV_PLL as parent
+	if(baud > 115200){
+		parent = clk_get(NULL, CLKNAME_DEVPLL);
+		if(IS_ERR(parent)){
+			pr_err("UART could not get DEV_PLL clock");
+			return;
+		}
+	}else{
+		parent = clk_get(NULL, CLKNAME_HOSC);
+		if(IS_ERR(parent)){
+			pr_err("UART could not get HOSC clock");
+			return ;
+		}
+	}
+	
+	if(clk_set_parent(owl_port->clk, parent)){
+		pr_err("can not set parent clk.");
+		return;
+	}
+	
 	clk_set_rate(owl_port->clk, baud * 8);
 }
 
@@ -618,6 +640,7 @@ static int owl_uart_probe(struct platform_device *pdev)
 	struct resource *res_mem;
 	struct owl_uart_port *owl_port;
 	int ret, irq;
+	unsigned int mod_clk_en = MODULE_CLK_UART3; //console so is always enable
 
 	if (pdev->dev.of_node) {
 		pdev->id = of_alias_get_id(pdev->dev.of_node, "serial");
@@ -656,32 +679,61 @@ static int owl_uart_probe(struct platform_device *pdev)
 	{
 	case 0:
 		owl_port->clk = clk_get(NULL, CLKNAME_UART0_CLK);
+		mod_clk_en = MODULE_CLK_UART0;
 		break;
 	case 1:
 		owl_port->clk = clk_get(NULL, CLKNAME_UART1_CLK);
+		mod_clk_en = MODULE_CLK_UART1;
 		break;
 	case 2:
 		owl_port->clk = clk_get(NULL, CLKNAME_UART2_CLK);
+		mod_clk_en = MODULE_CLK_UART2;
+		/*if(module_clk_enable(MODULE_CLK_UART2)){
+			pr_err("UART fail to enable module clk");
+		}*/
 		break;
 	case 3:
 		owl_port->clk = clk_get(NULL, CLKNAME_UART3_CLK);
+		mod_clk_en = MODULE_CLK_UART3;
 		break;
 	case 4:
 		owl_port->clk = clk_get(NULL, CLKNAME_UART4_CLK);
+		mod_clk_en = MODULE_CLK_UART4;
 		break;
 	case 5:
 		owl_port->clk = clk_get(NULL, CLKNAME_UART5_CLK);
+		mod_clk_en = MODULE_CLK_UART5;
 		break;
 	case 6:
 		owl_port->clk = clk_get(NULL, CLKNAME_UART6_CLK);
+		mod_clk_en = MODULE_CLK_UART6;
 	default:
 		break;
+	}
+
+	if (clk_prepare_enable(owl_port->clk))
+	{
+			dev_err(&pdev->dev, "could not prepare enable clk\n");
+			return -ENODEV;
+	}
+
+	if(module_clk_enable(mod_clk_en)){
+			pr_err("UART fail to enable module clk");
 	}
 	
 	if (IS_ERR(owl_port->clk))
 	{
 		dev_err(&pdev->dev, "could not get clk\n");
 		return PTR_ERR(owl_port->clk);
+	}
+
+	//set default baud rate to 115200
+	if (clk_set_rate(owl_port->clk, 115200 * 8))
+	{
+		dev_err(&pdev->dev, "could not set default clock rate\n");
+		return -ENODEV;
+	}else{
+		pr_info("default baud rate: 115200");
 	}
 
 	owl_port->port.dev = &pdev->dev;

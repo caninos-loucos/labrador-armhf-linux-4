@@ -481,4 +481,11 @@ config UNIPHIER_THERMAL
 	  Enable this to plug in UniPhier on-chip PVT thermal driver into the
 	  thermal framework. The driver supports CPU thermal zone temperature
 	  reporting and a couple of trip points.
+
+config CANINOS_LABRADOR_THERMAL
+	tristate "Labrador temperature sensor driver"
+	depends on THERMAL
+	default y
+	help
+	  Provides Actions S500-S700 processors temperature driver for labrador.
 endif

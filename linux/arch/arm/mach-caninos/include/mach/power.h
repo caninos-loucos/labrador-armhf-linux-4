@@ -134,7 +134,7 @@ struct owl_pmic_pm_ops {
 	int (*get_wakeup_flag)(void);       /* wakeup reason flag */
 
 	int (*shutdown_prepare)(void);
-	int (*powerdown)(uint deep_pwrdn, uint for_upgrade);
+	int (*powerdown)(uint deep_pwrdn);
 	int (*reboot)(uint tgt);
 
 	int (*suspend_prepare)(void);

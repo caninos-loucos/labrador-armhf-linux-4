@@ -912,12 +912,11 @@ static long clkops_round_rate(struct clk_hw *hw, unsigned long rate, unsigned lo
 			mulnum = rate / restnum;
 			if(restnum * mulnum != rate)
 				goto other;
-			divexp = mulnum << 16 | divnum;
+			//modivexp = mulnum << 16 | divnum;
 		} 
 other:
 		if ((divexp & 0xffff0000) == 0 && parent > divexp * (rate + 1))
 			divexp++;
-
 		divider = getdivider_ge(div, divexp);
 		if (divider > 0) {
 			if (divider & 0xffff0000) {
@@ -927,6 +926,7 @@ other:
 			}
 			return parent / divider;
 		} else {
+			//pr_err("%s: fail to get divisor", __func__);
 			ret = -1;
 			goto error;
 		}
@@ -1034,7 +1034,7 @@ static int  clkops_set_rate(struct clk_hw *hw, unsigned long rate, unsigned long
 			mulnum = rate / restnum;
 			if(restnum * mulnum != rate)
 				goto divint;
-			divexp = mulnum << 16 | divnum;
+			//divexp = mulnum << 16 | divnum;
 		}
 divint:
 
@@ -1052,6 +1052,9 @@ divint:
 			if (ret == 0) {
 				calcfrequency(clock);
 			}
+		}
+		else{
+			pr_err("%s: Could not get correct divisor on this clk", __func__);
 		}
 	}
 error:
