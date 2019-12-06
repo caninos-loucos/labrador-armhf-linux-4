@@ -160,27 +160,44 @@
 		    };
 		    
 		    serial4_state_default: serial4_default{
-				serial_4{
-					caninos,groups = "uart4_dummy";
-					caninos,function = "uart4";
-				};
-			};
+			    serial_4{
+				    caninos,groups = "uart4_dummy";
+				    caninos,function = "uart4";
+			    };
+		    };
 
-			serial5_state_default: serial5_default{
-				serial_5{
-					caninos,groups = "mfp2_19_17","mfp2_16_14";
-					caninos,function = "uart5";
-				};
-			};
+		    serial5_state_default: serial5_default{
+			    serial_5{
+				    caninos,groups = "mfp2_19_17","mfp2_16_14";
+				    caninos,function = "uart5";
+			    };
+		    };
 
-			serial6_state_default: serial6_default{
-				serial_6{
-					caninos,groups = "mfp0_18_16_eth_txd0", "mfp0_18_16_eth_txd1";
-					caninos,function = "uart6";
-				};
-			};
+		    serial6_state_default: serial6_default{
+			    serial_6{
+				    caninos,groups = "mfp0_18_16_eth_txd0", "mfp0_18_16_eth_txd1";
+				    caninos,function = "uart6";
+			    };
+		    };
+
+		    pinctrl_i2c2_default: i2c2_default {
+			    i2c2_default_mfp {
+				    caninos,groups = "i2c2_dummy";
+			 	    caninos,function = "i2c2";
+			    };
+
+			    i2c2_default_paddrv {
+				   caninos,groups = "paddrv2_22_21";
+				   caninos,paddrv = <0>;/*level 1*/
+			    };
+
+			    i2c2_default_pull_up {
+				   caninos,pins = "P_I2C2_SCLK","P_I2C2_SDATA";
+				   caninos,pull = <2>; /*pull up*/
+			    };
+		   };
 		    
-		    mmc0_state_default: mmc0_default {
+		   mmc0_state_default: mmc0_default {
 			    sd0_mfp_d0_d3_cmd_clk {
 				    caninos,groups = "mfp2_19_17", "mfp2_16_14", "mfp2_13_11", "mfp2_8_7", "mfp2_6_5";
 				    caninos,function = "sd0";
@@ -328,10 +345,10 @@
 		    status = "disabled";
 	    };
 	    
-	    i2c0: i2c@b0170000 {
-	    	#address-cells = <1>;
+	    i2c0: i2c@b0170000 { /*do not enable this i2c bus*/
+	    	    #address-cells = <1>;
 		    #size-cells = <0>;
-		    compatible = "caninos,labrador-i2c";
+		    compatible = "caninos,k5-i2c";
 		    reg = <0xb0170000 0x4000>;
 		    interrupts = < 0 25 0x4 >;
 		    status = "disabled";
@@ -340,7 +357,7 @@
 	    i2c1: i2c@b0174000 {
 		    #address-cells = <1>;
 		    #size-cells = <0>;
-		    compatible = "caninos,labrador-i2c";
+		    compatible = "caninos,k5-i2c";
 		    reg = <0xb0174000 0x4000>;
 		    interrupts = < 0 26 0x4 >;
 		    status = "disabled";
@@ -349,16 +366,20 @@
 	    i2c2: i2c@b0178000 {
 		    #address-cells = <1>;
 		    #size-cells = <0>;
-		    compatible = "caninos,labrador-i2c";
+		    compatible = "caninos,k5-i2c";
+		    pinctrl-names = "default";
+		    pinctrl-0 = <&pinctrl_i2c2_default>;
 		    reg = <0xb0178000 0x4000>;
 		    interrupts = < 0 27 0x4 >;
-		    status = "disabled";
+		    clock-frequency = <400000>;
+		    i2c_num = <2>;
+		    status = "okay";
 	    };
 
 	    i2c3: i2c@b017c000 {
 		    #address-cells = <1>;
 		    #size-cells = <0>;
-		    compatible = "caninos,labrador-i2c";
+		    compatible = "caninos,k5-i2c";
 		    reg = <0xb017c000 0x4000>;
 		    interrupts = < 0 28 0x4 >;
 		    status = "disabled";
