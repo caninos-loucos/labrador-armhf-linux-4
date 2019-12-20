@@ -288,7 +288,7 @@
 		    interrupts = < 0 29 0x4 >;
 		    pinctrl-names = "default";
 		    pinctrl-0 = <&serial0_state_default>;
-		    status = "disabled";
+		    status = "okay";
 	    };
 
 	    uart1: serial@b0122000 {
