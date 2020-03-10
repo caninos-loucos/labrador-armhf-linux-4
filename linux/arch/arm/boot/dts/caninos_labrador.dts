@@ -479,6 +479,14 @@
 		    interrupt-parent = <&intc>;
 		    clocks = <&clks 37>;
 	    };
+
+	    gpu@b0300000 {
+		compatible = "actions,atm7039c-gpu";
+		reg = <0xb0300000 0x10000>;
+		interrupts = < 0 3 0x4 >;
+		normal_value = <2>;
+		status = "okay";
+	    };
 	    
 	    hdmi@b02c0000{
 		    compatible = "caninos,labrador-hdmi";
