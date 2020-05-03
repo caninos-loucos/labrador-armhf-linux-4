@@ -801,6 +801,10 @@ alias usb:v0586p3407d*dc*dsc*dp*ic*isc*ip*in* zd1211rw
 alias usb:v0586p3402d*dc*dsc*dp*ic*isc*ip*in* zd1211rw
 alias usb:v0586p3401d*dc*dsc*dp*ic*isc*ip*in* zd1211rw
 alias usb:v0105p145Fd*dc*dsc*dp*ic*isc*ip*in* zd1211rw
+alias of:N*T*Cmicrochip,wilc3000C* wilc_sdio
+alias of:N*T*Cmicrochip,wilc3000 wilc_sdio
+alias of:N*T*Cmicrochip,wilc1000C* wilc_sdio
+alias of:N*T*Cmicrochip,wilc1000 wilc_sdio
 alias usb:v*p*d*dc*dsc*dp*icEFisc01ip01in* rndis_wlan
 alias usb:v*p*d*dc*dsc*dp*ic02isc02ipFFin* rndis_wlan
 alias usb:v0411p004Bd*dc*dsc*dp*ic02isc02ipFFin* rndis_wlan
@@ -3398,6 +3402,10 @@ alias usb:v2013p0246d*dc*dsc*dp*ic*isc*ip*in* dvb_as102
 alias usb:v1BA6p0001d*dc*dsc*dp*ic*isc*ip*in* dvb_as102
 alias serio:ty02pr40id*ex* pulse8_cec
 alias serio:ty02pr41id*ex* rainshadow_cec
+alias platform:labrador-thermal labrador_s500_thermal
+alias of:N*T*Ccaninos,labrador-thermalC* labrador_s500_thermal
+alias of:N*T*Ccaninos,labrador-thermal labrador_s500_thermal
+alias platform:labrador-tmu labrador_s500_thermal
 alias tty-ldisc-15 hci_uart
 alias usb:v8087p0A5Ad*dc*dsc*dp*ic*isc*ip*in* btusb
 alias usb:v0000p0000d*dc*dsc*dp*icFFisc01ip01in* btusb
@@ -4543,8 +4551,8 @@ alias usb:v0E41p4153d*dc*dsc*dp*ic*isc*ip*in* snd_usb_toneport
 alias usb:v0E41p4750d*dc*dsc*dp*ic*isc*ip*in* snd_usb_toneport
 alias usb:v0E41p534Dd*dc*dsc*dp*ic*isc*ip*in* snd_usb_variax
 alias usb:v0E41p4650d*dc*dsc*dp*ic*isc*ip*in01* snd_usb_variax
-alias ip6t_physdev xt_physdev
-alias ipt_physdev xt_physdev
+alias ip_conntrack nf_conntrack_ipv4
+alias nf_conntrack-2 nf_conntrack_ipv4
 alias nf-nat-2 nf_nat_ipv4
 alias xfrm-type-10-51 ah6
 alias xfrm-type-10-50 esp6
@@ -4563,7 +4571,6 @@ alias netdev-sit0 sit
 alias rtnl-link-sit sit
 alias netdev-ip6tnl0 ip6_tunnel
 alias rtnl-link-ip6tnl ip6_tunnel
-alias nft-expr-7-meta nft_meta_bridge
-alias nft-expr-7-reject nft_reject_bridge
-alias nf-logger-7-0 nf_log_bridge
+alias bt-proto-3 rfcomm
+alias bt-proto-4 bnep
 alias net-pf-16-proto-16-family-nl80211 cfg80211

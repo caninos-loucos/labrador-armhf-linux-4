@@ -15,6 +15,8 @@
 #include <linux/of.h>
 #include <linux/irq.h>
 #include <linux/reboot.h>
+#include <linux/kobject.h>
+#include <linux/timekeeping.h>
 
 #include <asm/suspend.h>
 #include <mach/hardware.h>
@@ -584,6 +586,89 @@ static int atc2603C_pm_config_onoff(void){
 	return ret;
 }
 
+static ssize_t adc_show(struct kobject *kobj, struct kobj_attribute *attr,
+                        char *buffer)
+{
+    int ret = -EINVAL;
+    ktime_t timestamp;
+    u16 value;
+    
+    if (strcmp(attr->attr.name, "adc0") == 0) {
+        ret = atc2603C_reg_read(ATC2603C_PMU_AUXADC0, &value);
+    }
+    else if (strcmp(attr->attr.name, "adc1") == 0) {
+        ret = atc2603C_reg_read(ATC2603C_PMU_AUXADC1, &value);
+    }
+    else if (strcmp(attr->attr.name, "adc2") == 0) {
+        ret = atc2603C_reg_read(ATC2603C_PMU_AUXADC1, &value);
+    }
+    
+    if (!ret) {
+        ret = value;
+    }
+    
+    timestamp = ktime_get();
+    
+    return sprintf(buffer, "%llu %d\n", ktime_to_us(timestamp), value);
+}
+
+static ssize_t adc_store(struct kobject *kobj, struct kobj_attribute *attr,
+                         const char *buffer, size_t count)
+{
+    return count;
+}
+
+static struct kobj_attribute adc0_attr = 
+    __ATTR(adc0, 0664, adc_show, adc_store);
+    
+static struct kobj_attribute adc1_attr =
+    __ATTR(adc1, 0664, adc_show, adc_store);
+    
+static struct kobj_attribute adc2_attr =
+    __ATTR(adc2, 0664, adc_show, adc_store);
+
+static struct attribute *adc_attrs[] = {
+    &adc0_attr.attr,
+    &adc1_attr.attr,
+    &adc2_attr.attr,
+    NULL,
+};
+
+static struct attribute_group attr_group = {
+    .attrs = adc_attrs,
+};
+
+// PMIC pin 23 AUXIN0 corresponds to ADC input on base board debug connector
+
+static struct kobject *adc_kobj;
+
+static int init_auxadc_sysfs_group(void)
+{
+    int ret;
+    
+    // start all adcs
+    atc2603C_reg_write(ATC2603C_PMU_AUXADC_CTL0, 0xffffU);
+    
+    // create directory auxadc at /sys/kernel/
+	adc_kobj = kobject_create_and_add("auxadc", kernel_kobj);
+	
+	if (!adc_kobj) {
+		return -ENOMEM;
+	}
+	
+	ret = sysfs_create_group(adc_kobj, &attr_group);
+	
+	if(ret) {
+	    kobject_put(adc_kobj);
+	}
+	
+	return ret;
+}
+
+static void exit_auxadc_sysfs_group(void)
+{
+	kobject_put(adc_kobj);
+}
 
 static int atc2603C_pm_probe(struct platform_device *pdev)
 {
@@ -642,8 +727,6 @@ static int atc2603C_pm_probe(struct platform_device *pdev)
 
 	atc2603C_pm_config_onoff();
 
-	//create_sysfs_group
-
 	owl_pmic_set_pm_ops(&atc2603C_pm_pmic_ops);
 
 	atc2603C_pm->irq = irq;
@@ -655,7 +738,14 @@ static int atc2603C_pm_probe(struct platform_device *pdev)
 		dev_err(dev, "failed to request ONOFF device irq(%d)\n", irq);
 		goto label_err_lv3;
 	}
-
+	
+	ret = init_auxadc_sysfs_group();
+	
+	if (ret) {
+	    dev_err(atc2603C_pm->dev, "failed to init adc, ret=%d\n", ret);
+	    goto label_err_lv3;
+	}
+	
 	pr_info("%s: Probe over", __func__);
 	return 0;
 
@@ -673,9 +763,8 @@ static int atc2603C_pm_probe(struct platform_device *pdev)
 static int atc2603C_pm_remove(struct platform_device *pdev)
 {
 	struct atc2603C_pm_dev *atc2603C_pm = platform_get_drvdata(pdev);
-	//remove sysfs group (if has)
+	exit_auxadc_sysfs_group();
 
-	//unregister pm_notifier
 	unregister_pm_notifier(&(atc2603C_pm->pm_nb));
 	owl_pmic_set_pm_ops(NULL);
 	platform_set_drvdata(pdev, NULL);
