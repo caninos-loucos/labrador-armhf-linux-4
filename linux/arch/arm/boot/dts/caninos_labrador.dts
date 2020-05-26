@@ -392,6 +392,45 @@
 		    wifi_enable_gpio = <&gpio  62 GPIO_ACTIVE_HIGH>; // GPIOB30
 		    bt_enable_gpio   = <&gpio  67 GPIO_ACTIVE_HIGH>; // GPIOC3
 		};
+		
+		spi {
+			compatible = "spi-gpio";
+			#address-cells = <1>;
+			ranges;
+			
+			/*
+			Lora Base Old
+			mosi -> GPIOC07 = 64 +  7 =  71
+			miso -> GPIOC09 = 64 +  9 =  73
+			sck  -> GPIOD28 = 96 + 28 = 124
+			ssel -> GPIOC02 = 64 +  2 =  66
+			*/
+
+			/*Lora Base New
+			mosi -> GPIOD24 = 96 + 24 = 120;
+			miso -> GPIOD25 = 96 + 25 = 121;
+			sck  -> GPIOC22 = 64 + 22 =  86;
+			ssel -> GPIOC02 = 64 +  2 =  66;
+			*/ 
+			
+			gpio-mosi = <&gpio 120 GPIO_ACTIVE_HIGH>;
+			gpio-miso = <&gpio 121 GPIO_ACTIVE_HIGH>;
+			gpio-sck  = <&gpio  86 GPIO_ACTIVE_HIGH>;
+			cs-gpios  = <&gpio  66 GPIO_ACTIVE_LOW>;
+			irq-gpio  = <&gpio  43 GPIO_ACTIVE_LOW>;
+
+			num-chipselects = <1>;
+			status = "okay";
+			
+			sx127x@0 {
+				compatible = "semtech,sx127x";
+				reg = <0x0>; /* CE0 */
+				#address-cells = <1>;
+				#size-cells = <0>;
+				spi-max-frequency = <500000>;
+				fosc = <32000000>; /* 32MHz crystal oscillator */
+			};
+		};
 	    
 	    mmc0: mmc@b0230000 {
 	        #address-cells = <1>;
