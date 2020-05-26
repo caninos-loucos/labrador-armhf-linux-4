@@ -6,6 +6,7 @@ obj-y += wifibt.o emmc.o
 obj-y += ethernet.o
 obj-y += usb/
 obj-y += video/
+obj-y += lora/
 obj-y += labrador-pm.o atc2903c-pm.o 
 #obj-y += sound/
 
