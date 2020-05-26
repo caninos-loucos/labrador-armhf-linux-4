@@ -673,6 +673,18 @@ static int __init cpu_set_clock(u32 freq, u32 voltage)
     return 0;
 }
 
+int reset_lora_module(void)
+{
+	pmic_reg_setbits(ATC2603C_PMU_SGPIO_CTL4, (0x1 << 4), (0x1 << 4));
+	mdelay(15);
+	pmic_reg_setbits(ATC2603C_PMU_SGPIO_CTL4, (0x1 << 4), 0);
+	mdelay(15);
+	return 0;
+}
+
+EXPORT_SYMBOL_GPL(reset_lora_module);
+
+
 static void __init board_check_revision(void)
 {
 	const u64 phys_offset = __pa(PAGE_OFFSET);
