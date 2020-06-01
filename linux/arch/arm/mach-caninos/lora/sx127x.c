@@ -3,6 +3,7 @@
  *
  * sx127x's lora driver 
  * (some functions under construction and others not working)
+ * this code does not compile
 */
 
 
@@ -127,7 +128,7 @@ int sx127x_reg_write24(struct sx127x_priv *sx127x, int reg, u32 value)
 
 int sx127x_reg_read24(struct sx127x_priv *sx127x, int reg)
 {
-	/* 0x7F bit mais significativo eh setado pra 0, indicando leitura */
+	/* 0x7F most significant bitis set to 0, that means read */
 	u8 addr = reg & 0x7F;
 	u8 buff[3];
 	int ret;
@@ -154,7 +155,7 @@ int sx127x_reg_read24(struct sx127x_priv *sx127x, int reg)
 
 int sx127x_reg_read_n(struct sx127x_priv *sx127x, int reg, int n)
 {
-	/* 0x7F bit mais significativo eh setado pra 0, indicando leitura */
+	/* 0x7F most significant bitis set to 0, that means read */
 	u8 addr = reg & 0x7F;
 	u8 buff[n];
 	int ret,i;
@@ -376,12 +377,9 @@ int sx127x_go_lora_tx(struct sx127x_priv *sx127x)
 		return dev_err(sx127x_go_lora_rx, "could not enter in rx mode");
 	// set AccesSharedReg back to 0
 	
-	ret = sx127x_reg_clear_set(sx127x, REG_OPMODE,REG_OPMODE_LORA_SHARED_ACCESS_MSK, 0);
+	ret = sx127x_reg_clear_set(sx127x, REG_OPMODE,REG_LORA_SHARED_ACCESS_MSK,0);
 
 }
-
-
-
 
 int sx127x_go_lora_rx(struct sx127x_priv *sx127x)
 { 
@@ -399,8 +397,7 @@ int sx127x_go_lora_rx(struct sx127x_priv *sx127x)
 							   REG_OPMODE_LORA_MSK,
 							   REG_OPMODE_LORA_RX_CONTINUOUS);
 
-
-	// set AccesSharedReg para 1
+	// set AccesSharedReg to 1
 
 	ret = sx127x_reg_clear_set(sx127x, REG_OPMODE,
 							   REG_OPMODE_LORA_SHARED_ACCESS_MSK,
@@ -409,7 +406,7 @@ int sx127x_go_lora_rx(struct sx127x_priv *sx127x)
 		if(sx127x_reg_read(sx127x, REG_IRQ_FLAGS1_MODEREADY) < 0 )
 		return dev_err(sx127x_go_lora_rx, "could not enter in rx mode");
 
-	// set AccesSharedReg para 0
+	// set AccesSharedReg to 0
 	
 	ret = sx127x_reg_clear_set(sx127x, 
 							   REG_OPMODE,REG_OPMODE_LORA_SHARED_ACCESS_MSK, 0);
@@ -514,7 +511,6 @@ static void rx_worker(struct work_struct *work)
 				ret = sx127x_go_lora_tx(sx127x);
 
 				ret = sx127x_reg_write(sx127x, REG_IRQ_FLAGS, 0xFF);
-	
 
 				irq_flags = sx127x_reg_read(sx127x, REG_IRQ_FLAGS);
 		

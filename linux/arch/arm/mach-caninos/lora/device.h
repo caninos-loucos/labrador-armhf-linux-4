@@ -4,6 +4,8 @@
 /*number of retries in case read or write functions fail*/
 #define RW_RETRY (5)
 
+#define RX_WORK_POOLING_PERIOD (10) // Pool rx registers every 10ms
+
 #define REG_FIFO     (0x00)
 #define REG_OPMODE   (0x01)
 #define REG_FRFMSB   (0x06)
@@ -99,7 +101,7 @@ Signal
 #define REG_PACONFIG_PASELECT (0x1 << 7)
 #define REG_PA_CONFIG_SELECT_PA_BOOST (0x01)
 
-#define FIFO_SIZE (512)
+#define FIFO_SIZE 						  (512)
 #define REG_LORA_PREAMBLE_MSB 			  (0x20)
 #define REG_LORA_PREAMBLE_LSB             (0x21)
 #define REG_LORA_FIFO_RX_BYTE_ADDRES      (0x25)
@@ -108,7 +110,7 @@ Signal
 #define REG_LORA_FIFO_ADDR_PTR            (0x0D)
 #define REG_LORA_FIFO_RX_CURR_ADDRESS     (0x10)
 
-#define REG_OPMODE_LORA_SHARED_ACCESS_MSK (0x01 << 7)
+#define REG_LORA_SHARED_ACCESS_MSK        (0x01 << 7)
 #define REG_OPMODE_LORA_SHARED_ACCESS_ON  (0x01 << 7)
 
 #define REG_VERSION_FULLREV_MSK 		  (0x0F << 4)
@@ -121,7 +123,6 @@ Signal
 #define DEF_LORA_RF_CARRIER_FREQ (915000000)
 #define DEF_CRYSTAL_OSC_FREQ (32000000)
 
-#define RX_WORK_POOLING_PERIOD (10) // Pool rx registers every 10ms
 
 int sx127x_reg_read(struct spi_device *spi, u16 reg, u8 *result);
 
