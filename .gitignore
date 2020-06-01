@@ -1,4 +1,4 @@
 /build/*
 output/
-examples/
+examples/*.sh
 linux/tags

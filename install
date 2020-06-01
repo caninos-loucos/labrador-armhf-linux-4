@@ -1,4 +1,0 @@
-apt-get install git
-apt-get install libncurses-dev
-apt-get install gcc-arm-linux-gnueabihf
-apt-get install u-boot-tools

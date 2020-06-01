@@ -7,7 +7,8 @@ Linux 4 for Caninos Labrador V2
 >Labrador Core Boards v2.x should work fine with this kernel!
 
 @What is needed?
->Some tools are necessary for compilation, please read the 'install' file in this repository.
+>These tools are necessary for compilation, most of them are available at official repositories.
+git, libncurses-dev, gcc-arm-linux-gnueabihf, u-boot-tools
 
 @How to compile?
 >Clone the git repository, go to the main path and run make from your favourite terminal.
