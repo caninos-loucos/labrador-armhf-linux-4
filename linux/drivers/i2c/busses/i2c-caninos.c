@@ -37,7 +37,7 @@ int module_clk_enable(int mod_id);
 #define OWL_I2C_DBG_LEVEL_OFF		0
 #define OWL_I2C_DBG_LEVEL_ON		1
 #define OWL_I2C_DBG_LEVEL_VERBOSE	2
-#define OWL_I2C_DEFAULT_DBG_LEVEL	OWL_I2C_DBG_LEVEL_ON
+#define OWL_I2C_DEFAULT_DBG_LEVEL	OWL_I2C_DBG_LEVEL_OFF
 
 #define OWL_I2C_TIMEOUT			(4 * 1000) /* ms */
 #define OWL_I2C_FIFO_SIZE		(128)
@@ -591,7 +591,7 @@ static int owl_i2c_do_transfer(struct owl_i2c_dev *dev,
 		i2c_err(dev, "transfer timed out\n");
 		ret = -EREMOTEIO;
 	} else {
-		i2c_err(dev, "transfer error\n");
+		/*i2c_err(dev, "transfer error\n");*/
 		ret = -ENXIO;
 	}
 
