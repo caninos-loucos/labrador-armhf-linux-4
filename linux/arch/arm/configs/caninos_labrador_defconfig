@@ -3144,6 +3144,8 @@ CONFIG_DVB_AF9033=m
 #
 # Graphics support
 #
+CONFIG_IMG_PVR_GPU=y
+CONFIG_IMG_SGX_5xx=m
 CONFIG_DRM=y
 # CONFIG_DRM_DP_AUX_CHARDEV is not set
 # CONFIG_DRM_DEBUG_MM is not set

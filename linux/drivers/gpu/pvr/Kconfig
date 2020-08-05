@@ -1,0 +1,17 @@
+menuconfig IMG_PVR_GPU
+	bool "IMG PVR GPU Support "
+	default n
+	help
+	  Say Y here if you have a IMG GPU on the chip	
+
+if IMG_PVR_GPU
+
+config IMG_SGX_5xx
+	tristate "SGX-540 or SGX-544"
+	default n
+	help
+	  Say M here if you have a IMG_SGX_5xx on the chip
+
+endif
+
+

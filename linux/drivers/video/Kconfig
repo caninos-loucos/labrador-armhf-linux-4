@@ -11,6 +11,8 @@ config HAVE_FB_ATMEL
 config SH_LCD_MIPI_DSI
 	bool
 
+source "drivers/gpu/pvr/Kconfig"
+
 source "drivers/char/agp/Kconfig"
 
 source "drivers/gpu/vga/Kconfig"
