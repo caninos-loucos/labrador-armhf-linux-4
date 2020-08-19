@@ -18,12 +18,12 @@
 #include <linux/jiffies.h>
 #include <linux/kfifo.h>
 #include <linux/math64.h>
-#include <regs.h>
+#include <device.h>
 
 
 extern int reset_lora_module(void); /* from board.c */
 
-int sx127x_go_lora_rx(struct sx127x_priv);
+int sx127x_go_lora_rx(struct sx127x_priv *sx127x);
 
 static struct class *devclass;
 static int devmajor, devminor;
@@ -52,9 +52,11 @@ struct sx127x_priv
     atomic_t device_state;
     
     DECLARE_KFIFO(rx_fifo, struct lora_packet, FIFO_SIZE);
-    DECLARE_KFIFO(tx_fifo, struct lora_packet, FIFO_SIZE);
     
-    struct lora_packet tmp;
+	struct lora_packet tx_packet;
+
+	bool transmitting; 
+    //struct lora_packet tmp;
 };
 
 int sx127x_reg_read_noretry(struct sx127x_priv *sx127x, int reg)
@@ -306,8 +308,7 @@ int sx127x_go_lora(struct sx127x_priv *sx127x)
 	
 	aux = div_u64(aux, DEF_CRYSTAL_OSC_FREQ);
 	
-	
-	ret = sx127x_reg_write(sx127x, REG_FR_MSB, aux & 0xFFFFFF);
+	ret = sx127x_reg_write(sx127x, REG_FRFMSB, aux & 0xFFFFFF);
 	
 	
 	/* Setting gain*/
@@ -318,25 +319,25 @@ int sx127x_go_lora(struct sx127x_priv *sx127x)
 
 
 	/* Turn PA boost to 1*/
-	ret = sx127x_reg_clear_set(sx127x, REG_PA_CONFIG,
-                                   REG_PA_CONFIG_SELECT_MSK,
+	ret = sx127x_reg_clear_set(sx127x, REG_PACONFIG,
+                                   REG_PACONFIG_PASELECT,
                                    REG_PA_CONFIG_SELECT_PA_BOOST);
 
  
 	/*Configuring bandwidth to 125kHz*/
-	ret = sx127x_reg_clear_set(sx127x, REG_LORA_CONF1,
-                                   REG_LORA_CONF1_BW_MSK,
-                                   REG_LORA_CONF1_BW_125);
+	ret = sx127x_reg_clear_set(sx127x, REG_LORA_MODEMCONFIG1,
+                                  REG_LORA_IRQFLAGSMSK,
+                                   REG_LORA_RX_NB_BYTES);
 
 	
 	/*Configuring spreading factor to 12*/
-	ret = sx127x_reg_clear_set(sx127x, REG_LORA_CONF2,
-								   REG_LORA_CONF2_SPREADING_FACTOR_MSK, 
-								   REG_LORA_CONF2_SPREADING_FACTOR);
+	ret = sx127x_reg_clear_set(sx127x, REG_LORA_MODEMCONFIG2,
+								   REG_LORA_MODEMCONFIG2_SPREADINGFACTOR_MASK, 
+								   REG_LORA_MODEMCONFIG2_SPREADINGFACTOR_MASK);
 
     
     return sx127x_reg_clear_set(sx127x, REG_OPMODE,
-                                   REG_OPMODE_FSKOOK_LORAMODE_MSK,
+                                   REG_LORA_MODEMCONFIG2_SPREADINGFACTOR_MASK,
                                    REG_OPMODE_FSKOOK_LORAMODE_LORA);
 }
 
@@ -368,13 +369,14 @@ int sx127x_go_lora_tx(struct sx127x_priv *sx127x)
 
 
 	// set AccesSharedReg to 1
+	// FALTA UM REGISTRADOR NA FUNCAO AQUI 
 	ret = sx127x_reg_clear_set(sx127x, 
-							   REG_OPMODE,REG_OPMODE_LORA_SHARED_ACCESS_MSK, 
+							   REG_OPMODE_LORA_SHARED_ACCESS_ON,REG_OPMODE_LORA_SHARED_ACCESS_MSK, 
 							   REG_OPMODE_LORA_SHARED_ACCESS_ON);
 
 	/* It does not happen on LORA's registers, but FSK/OOK */
 	if(sx127x_reg_read(sx127x, REG_IRQ_FLAGS1_MODEREADY) < 0 )
-		return dev_err(sx127x_go_lora_rx, "could not enter in rx mode");
+		return dev_err(sx127x, "could not enter in rx mode");
 	// set AccesSharedReg back to 0
 	
 	ret = sx127x_reg_clear_set(sx127x, REG_OPMODE,REG_LORA_SHARED_ACCESS_MSK,0);
@@ -400,7 +402,7 @@ int sx127x_go_lora_rx(struct sx127x_priv *sx127x)
 	// set AccesSharedReg to 1
 
 	ret = sx127x_reg_clear_set(sx127x, REG_OPMODE,
-							   REG_OPMODE_LORA_SHARED_ACCESS_MSK,
+							   REG_OPMODE_LORA_SHARED_ACCESS_ON,
 							   REG_OPMODE_LORA_SHARED_ACCESS_ON);
 
 		if(sx127x_reg_read(sx127x, REG_IRQ_FLAGS1_MODEREADY) < 0 )
@@ -501,12 +503,13 @@ static void rx_worker(struct work_struct *work)
             
             lastError = dev_err(spi->dev, "rx_worker failed");
         }
+		return;
 
 //------------------------------------TXWORKER----------------------------------
         
-        else
-		{
-            if (!kfifo_is_empty(tx_fifo))
+static void tx_worker(struct work_struct *work){
+		if (!transmitting)
+
             {
 				ret = sx127x_go_lora_tx(sx127x);
 
@@ -516,20 +519,36 @@ static void rx_worker(struct work_struct *work)
 		
 				ret = sx127x_reg_write(sx127x, REG_IRQ_FLAGS, 0xFF);
 
-				sx127x_reg_write_n(sx127x, REG_FIFO, sx127x->tmp.data[i]);
+				sx127x_reg_write_n(sx127x, REG_FIFO, &sx127x->tx_packet);
+				//ativar variavel transmitting 
+				transmitting = True;
 
 				/* when it receives txdone it goes automatically to standby */
 
+				schedule_delayed_work(&sx127x->tx_work, msecs_to_jiffies(RETRY));
+				//scheduledelaedwork do txworker
+				return;
 			}
-		}
-        
-        if (1) 
+}
+
+        //nao esquece de fazer essa var
+		//proteger transmitting com mutex
+        if (transmitting) 
         {
-            atomic_sub(&sx127x->device_state,0); 
-            
-            lastError = dev_err(spi->dev, "tx_worker failed");
+            //atomic_sub(&sx127x->device_state,0); 
  
+			//ler os flags da interrupcao (copiar do rx_worker)
+
+			ret = sx127x_reg_write(sx127x, REG_IRQ_FLAGSMASK, 0x0);
+
+			irq_flags = sx127x_reg_read(sx127x, REG_IRQ_FLAGS);
+		
+		//Clean device's regs
+			ret = sx127x_reg_write(sx127x, REG_IRQ_FLAGS, 0xFF);
+	
+
 				/* Check tx */
+			//fala se deu certo, se ainda ta fazndo ou deu erro
                 if(irq_flags & BIT(3))
 				{
             		lastError = dev_err(spi->dev, "tx_worker failed");
@@ -545,20 +564,13 @@ static void rx_worker(struct work_struct *work)
             atomic_sub(&sx127x->device_state,0);
 			
 			/* schedule one jiffies from now (current jiffies) */
-            schedule_delayed_work(&sx127x->rx_work, jiffies + 1);
+            schedule_delayed_work(&sx127x->tx_work, msecs_to_jiffies(RETRY));
             return;
         }
         
         
     }
     
-//---------------------------------TXWORKER-------------------------------------
-
-
-
-
-    schedule_delayed_work(&sx127x->rx_work,
-                          msecs_to_jiffies(RX_WORK_POOLING_PERIOD));
 }
 
 #define SX127X_DRIVERNAME "sx127x"
@@ -631,7 +643,7 @@ static int sx127x_probe(struct spi_device *spi)
 	INIT_DELAYED_WORK(sx127x->rx_work, rx_worker);
 	
 	ret = schedule_delayed_work(&sx127x->rx_work,
-	                            msecs_to_jiffies(RX_WORK_POOLING_PERIOD));
+	                            msecs_to_jiffies(RETRY));
 	
 	if (ret)
 	{
@@ -735,8 +747,8 @@ static ssize_t sx127x_dev_read
 	
 	sx127x_reg_write(sx127x, REG_IRQ_FLAGS, 0xff);
 	
-	sx127x_reg_write(sx127x, REG_IRQ_FLAGSMSK, 
-		~(REG_IRQ_FLAGS_RXDONE | REG_IRQ_FLAGS_PAYLOAD_CRCERROR));
+	sx127x_reg_write(sx127x, REG_IRQ_FLAGSMASK, 
+		~( REG_LORA_IRQFLAGS_RXDONE | REG_LORA_IRQ_FLAGS_PAYLOAD_CRCERROR));
 	
 	mutex_unlock(&device_list_lock);
 
@@ -755,15 +767,22 @@ static ssize_t sx127x_dev_read
 
 //---------------------------------dev_write------------------------------>>>>>>
 
-sx127x_dev_write
+sx127x_dev_write//ver codigo antigo
 {
+	//fazr copyfrom user e copiar num buffer, setar var de estado p iniciar transmicao
+	//entra em loop com sleep, verificando se o txworker mudou state var
+	//tem uma funcao qe checa evento (checa driver de antes)
+	//retornar timeout (reseta o estado antes) dps de x seg -ETIMEDOUT
 	struct sx127x *data = filp->private_data;
 	size_t packetsz, offset, maxpkt = 256;
 	unsigned long n;
 	bool transmit;
 	u8 kbuf[256];
 
-	if (!REG_OPMODE_LORA_TX)
+	//se ja ta transmitindo tem q retornar q ta ocupado
+	//ve se n ta em rx- se sim retorna EINVAL
+	//se n couber no buffer joga EINVAL tbm
+	if (!transmitting)
 	{
 		dev_err(data->chardevice, "device is not in transmit mode.\n");
 		return -EINVAL;
@@ -773,7 +792,7 @@ sx127x_dev_write
 	{
 		packetsz = min((count - offset), maxpkt);
 		
-		mutex_lock(&data->mutex);
+		mutex_lock(&data->device_list);
 		n = copy_from_user(kbuf, buf + offset, packetsz);
 		if( n!= 0 ){
 			pr_err("failed copying data from user");
@@ -795,7 +814,7 @@ sx127x_dev_write
 
 		mutex_unlock(&data->mutex);
 		
-		schedule_delayed_work(&data->tx_work, usecs_to_jiffies(POOLING_DELAY));
+		schedule_delayed_work(&data->tx_work, usecs_to_jiffies(RX_WORK_POOLING_PERIOD));
 		
 		wait_event_interruptible_timeout(data->writewq, data->transmitted, 60 * HZ);
 
