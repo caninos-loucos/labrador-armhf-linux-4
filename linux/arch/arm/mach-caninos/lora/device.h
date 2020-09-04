@@ -110,8 +110,7 @@ Signal
 #define REG_LORA_FIFO_ADDR_PTR            (0x0D)
 #define REG_LORA_FIFO_RX_CURR_ADDRESS     (0x10)
 
-#define REG_LORA_SHARED_ACCESS_MSK        (0x01 << 7)
-#define REG_OPMODE_LORA_SHARED_ACCESS_ON  (0x01 << 7)
+#define REG_OPMODE_LORA_SHARED_ACCESS_MSK        (0x01 << 7)
 
 #define REG_VERSION_FULLREV_MSK 		  (0x0F << 4)
 #define REG_VERSION_METALREV_MSK 		  (0x0F << 0)
@@ -124,23 +123,27 @@ Signal
 #define DEF_CRYSTAL_OSC_FREQ (32000000)
 
 
-int sx127x_reg_read(struct spi_device *spi, u16 reg, u8 *result);
+static ssize_t sx127x_dev_read(struct file *filp, char __user *buf, size_t count, loff_t *f_pos);
+
+static ssize_t sx127x_dev_write(struct sx127x_priv *sx127x,struct file *filp, char __user *buf, size_t count, loff_t *f_pos);
+
+int sx127x_reg_read(struct sx127x_priv *sx127x, int reg);
 
 int sx127x_reg_read16(struct spi_device *spi, u16 reg, u16* result);
 
-int sx127x_reg_read24(struct spi_device *spi, u16 reg, u32* result);
+int sx127x_reg_read24(struct sx127x_priv *sx127x, int reg);
 
-int sx127x_reg_write(struct spi_device *spi, u16 reg, u8 value);
+int sx127x_reg_write(struct sx127x_priv *sx127x, int reg, u8 value);
 
-int sx127x_reg_write24(struct spi_device *spi, u16 reg, u32 value);
+int sx127x_reg_write24(struct sx127x_priv *sx127x, int reg, u32 value);
 
 enum sx127x_modulation sx127x_getmodulation(struct sx127x *data);
 
-enum sx127x_opmode sx127x_getopmode(struct sx127x *data);
+int mode sx127x_getopmode(struct sx127x *sx127x);
 
 int sx127x_getchipversion(struct sx127x *data, u8 *version);
 
-int sx127x_setopmode(struct sx127x *data, enum sx127x_opmode opmode);
+int sx127x_setopmode(struct sx127x *sx127x, enum sx127x_opmode opmode);
 
 int sx127x_setmodulation(struct sx127x *data, enum sx127x_modulation mod);
 
