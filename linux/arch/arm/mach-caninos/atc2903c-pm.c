@@ -600,7 +600,7 @@ static ssize_t adc_show(struct kobject *kobj, struct kobj_attribute *attr,
         ret = atc2603C_reg_read(ATC2603C_PMU_AUXADC1, &value);
     }
     else if (strcmp(attr->attr.name, "adc2") == 0) {
-        ret = atc2603C_reg_read(ATC2603C_PMU_AUXADC1, &value);
+        ret = atc2603C_reg_read(ATC2603C_PMU_AUXADC2, &value);
     }
     
     if (!ret) {
